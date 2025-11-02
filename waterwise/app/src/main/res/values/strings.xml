@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">waterwise</string>
+    <string name="title_home">Home</string>
+    <string name="title_dashboard">Stats</string>
+    <string name="title_notifications">Events</string>
+    <string name="title_profile">Profile</string>
+</resources>
