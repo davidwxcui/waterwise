@@ -392,6 +392,7 @@
                     android:layout_height="wrap_content"
                     android:text="330ml"
                     android:textSize="10sp"
+                    
                     android:textColor="@color/black"/>
             </LinearLayout>
         </GridLayout>
