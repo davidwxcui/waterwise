@@ -195,7 +195,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="💧"
-                    android:textSize="32sp" />
+                    android:textSize="32sp"
+                    android:textColor="@color/black"/>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -203,14 +204,15 @@
                     android:text="Water"
                     android:textSize="12sp"
                     android:textStyle="bold"
-                    android:layout_marginTop="8dp" />
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/black" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="250ml"
                     android:textSize="10sp"
-                    android:textColor="#999999" />
+                    android:textColor="@color/black" />
             </LinearLayout>
 
             <!-- Tea -->
@@ -229,7 +231,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="🍵"
-                    android:textSize="32sp" />
+                    android:textSize="32sp"
+                    android:textColor="@color/black" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -237,14 +240,15 @@
                     android:text="Tea"
                     android:textSize="12sp"
                     android:textStyle="bold"
-                    android:layout_marginTop="8dp" />
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/black"/>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="200ml"
                     android:textSize="10sp"
-                    android:textColor="#999999" />
+                    android:textColor="@color/black" />
             </LinearLayout>
 
             <!-- Coffee -->
@@ -263,7 +267,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="☕"
-                    android:textSize="32sp" />
+                    android:textSize="32sp"
+                    android:textColor="@color/black"/>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -271,14 +276,15 @@
                     android:text="Coffee"
                     android:textSize="12sp"
                     android:textStyle="bold"
-                    android:layout_marginTop="8dp" />
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/black"/>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="150ml"
                     android:textSize="10sp"
-                    android:textColor="#999999" />
+                    android:textColor="@color/black"/>
             </LinearLayout>
 
             <!-- Juice -->
@@ -297,7 +303,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="🧃"
-                    android:textSize="32sp" />
+                    android:textSize="32sp"
+                    android:textColor="@color/black"/>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -305,14 +312,15 @@
                     android:text="Juice"
                     android:textSize="12sp"
                     android:textStyle="bold"
-                    android:layout_marginTop="8dp" />
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/black"/>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="200ml"
                     android:textSize="10sp"
-                    android:textColor="#999999" />
+                    android:textColor="@color/black"/>
             </LinearLayout>
 
             <!-- Milk -->
@@ -331,7 +339,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="🥛"
-                    android:textSize="32sp" />
+                    android:textSize="32sp"
+                    android:textColor="@color/black"/>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -339,14 +348,15 @@
                     android:text="Milk"
                     android:textSize="12sp"
                     android:textStyle="bold"
-                    android:layout_marginTop="8dp" />
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/black"/>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="250ml"
                     android:textSize="10sp"
-                    android:textColor="#999999" />
+                    android:textColor="@color/black" />
             </LinearLayout>
 
             <!-- Soda -->
@@ -365,7 +375,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="🥤"
-                    android:textSize="32sp" />
+                    android:textSize="32sp"
+                    android:textColor="@color/black"/>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -373,14 +384,15 @@
                     android:text="Soda"
                     android:textSize="12sp"
                     android:textStyle="bold"
-                    android:layout_marginTop="8dp" />
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/black"/>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="330ml"
                     android:textSize="10sp"
-                    android:textColor="#999999" />
+                    android:textColor="@color/black"/>
             </LinearLayout>
         </GridLayout>
 
