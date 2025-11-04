@@ -1,7 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
+
+    <!-- App -->
     <string name="app_name">waterwise</string>
+
+    <!-- Bottom navigation titles (for menu & nav graph) -->
     <string name="title_home">Home</string>
     <string name="title_dashboard">Stats</string>
     <string name="title_notifications">Events</string>
     <string name="title_profile">Profile</string>
+
+    <!-- Home header -->
+    <string name="today_title">Today - %1$s</string>
+
+    <!-- Progress ring / goal -->
+    <string name="progress_main">%1$d / %2$d ml</string>
+    <string name="progress_effective">Effective: %1$d ml</string>
+    <string name="remaining_ml">%1$d ml left</string>
+    <string name="over_by">Over by %1$d ml</string>
+    <string name="no_drinks_yet">No drinks logged yet</string>
+
+    <!-- Sections -->
+    <string name="quick_add">Quick Add</string>
+    <string name="timeline">Timeline</string>
+    <string name="today_summary">Today Summary</string>
+
+    <!-- Dialog / buttons -->
+    <string name="add">Add</string>
+    <string name="why">Why?</string>
+    <string name="same_as_last_time">Same as last time</string>
+    <string name="custom_ellipsis">Custom...</string>
+    <string name="add_drink_title">Add %1$s</string>
+    <string name="custom_amount_title">Custom amount (%1$s)</string>
+
+    <!-- Summary text -->
+    <string name="summary_text_fmt">
+        Water %1$d%% - Caffeine %2$d%% - Sugary %3$d%%
+    </string>
+
+    <!-- Event card -->
+    <string name="event_title_fmt">%1$s - D-%2$d</string>
+
+    <!-- Insights -->
+    <string name="insight_suggest_now">Suggested now: +%1$d ml Water</string>
+    <string name="insight_late_small_sips">It is late. Consider smaller sips.</string>
+    <string name="insight_high_caffeine">High caffeine today. Prefer water for the next drink.</string>
+
+    <!-- Why dialog -->
+    <string name="why_title">Why?</string>
+    <string name="why_message">
+        We estimate your daily goal by weight times a coefficient. Each beverage has a hydration factor
+        (for example: water 1.0, tea 0.9, coffee 0.8, alcohol 0.7). We also show a soft daily limit
+        based on weight times 60 ml per kg, and after 9 pm we recommend smaller sips.
+    </string>
+
 </resources>

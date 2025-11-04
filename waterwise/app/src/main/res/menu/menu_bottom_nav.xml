@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Home Page -->
+    <item
+        android:id="@+id/nav_home"
+        android:icon="@drawable/baseline_water_drop_24"
+        android:title="Home" />
+
+    <!-- Stats Page -->
+    <item
+        android:id="@+id/nav_stats"
+        android:icon="@drawable/analytics_24dp_e3e3e3_fill0_wght400_grad0_opsz24"
+        android:title="Stats" />
+
+    <!-- Events Page -->
+    <item
+        android:id="@+id/nav_events"
+        android:icon="@drawable/event_24dp_e3e3e3_fill0_wght400_grad0_opsz24"
+        android:title="Events" />
+
+    <!-- Profile Page -->
+    <item
+        android:id="@+id/nav_profile"
+        android:icon="@drawable/baseline_account_circle_24"
+        android:title="Profile" />
+</menu>

@@ -1,41 +1,60 @@
 package com.davidwxcui.waterwise
 
 import android.os.Bundle
-import android.widget.Toast
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.navigation.findNavController
-import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.setupActionBarWithNavController
-import androidx.navigation.ui.setupWithNavController
+import androidx.fragment.app.commit
 import com.davidwxcui.waterwise.databinding.ActivityMainBinding
+import com.davidwxcui.waterwise.ui.home.HomeFragment
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+    private var currentDest: Int = R.id.nav_home
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // NO ActionBar
+        supportActionBar?.hide()
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val navView: BottomNavigationView = binding.navView
+        if (savedInstanceState == null) {
+            openHome()
+        }
 
-        val navController = findNavController(R.id.nav_host_fragment_activity_main)
-        // Passing each menu ID as a set of Ids because each
-        // menu should be considered as top level destinations.
-        val appBarConfiguration = AppBarConfiguration(
-            setOf(
-                R.id.navigation_home, R.id.navigation_dashboard, R.id.navigation_notifications, R.id.navigation_profile
-            )
-        )
-        supportActionBar?.hide()//hide top bar
-        setupActionBarWithNavController(navController, appBarConfiguration)
-        navView.setupWithNavController(navController)
-        binding.fabAdd.setOnClickListener {
-            // Add your action here
-            Toast.makeText(this, "Add button clicked", Toast.LENGTH_SHORT).show()
+        binding.bottomNav.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.navigation_home -> {
+                    if (currentDest != R.id.navigation_home) openHome()
+                    currentDest = R.id.navigation_home
+                    true
+                }
+                R.id.navigation_dashboard,
+                R.id.navigation_notifications,
+                R.id.navigation_profile -> {
+                    // Placeholder
+                    currentDest = item.itemId
+                    true
+                }
+                else -> false
+            }
+        }
+
+        binding.fab.setOnClickListener {
+            val f = supportFragmentManager.findFragmentById(binding.container.id)
+            if (f is HomeFragment) {
+                f.showFabQuickAdd()
+            }
+        }
+
+        binding.bottomNav.selectedItemId = R.id.navigation_home
+    }
+
+    private fun openHome() {
+        supportFragmentManager.commit {
+            replace(binding.container.id, HomeFragment())
         }
     }
 }
