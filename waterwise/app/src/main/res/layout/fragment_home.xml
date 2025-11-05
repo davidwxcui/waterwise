@@ -14,62 +14,158 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <TextView
-            android:id="@+id/topTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textStyle="bold"
-            android:textSize="18sp"
-            android:text="Today - Mon, Jan 1"
-            android:paddingBottom="8dp"/>
-
+        <!-- Header -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:padding="12dp"
-            android:background="@android:color/white"
-            android:elevation="1dp">
+            android:gravity="center_vertical"
+            android:layout_marginBottom="24dp">
 
-            <com.davidwxcui.waterwise.ui.home.ProgressRingView
-                android:id="@+id/progressRing"
-                android:layout_width="96dp"
-                android:layout_height="96dp" />
-
+            <!-- Vertical layout for the texts on the left -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:orientation="vertical"
-                android:paddingStart="12dp"
-                android:gravity="center_vertical">
+                android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/progressMain"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="0 / 2000 ml"
+                    android:text="Hello, Alex!"
+                    android:textSize="28sp"
                     android:textStyle="bold"
-                    android:textSize="16sp" />
+                    android:textColor="@android:color/black" />
 
                 <TextView
-                    android:id="@+id/progressSub"
+                    android:id="@+id/topTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Effective: 0 ml"
-                    android:textSize="13sp"
-                    android:paddingTop="2dp"/>
+                    android:text="Stay hydrated today"
+                    android:textSize="14sp"
+                    android:textColor="#999999"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
+
+            <!-- Notification bell on the right -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center">
+
+                <ImageView
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@drawable/notifications_24dp"
+                    android:contentDescription="Notifications"
+                    android:background="@drawable/circle_background"
+                    android:padding="5dp"
+                    android:scaleType="centerInside"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Progress Card -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:background="@drawable/gradient_blue_purple"
+            android:orientation="vertical"
+            android:padding="24dp"
+            android:radius="16dp">
+
+            <!-- Top Section: Text and Circular Progress -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <!-- Left Text Section -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Today's Progress"
+                        android:textSize="14sp"
+                        android:textColor="@android:color/white" />
+
+                    <TextView
+                        android:id="@+id/progressMain"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="1850ml"
+                        android:textSize="32sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/white"
+                        android:layout_marginTop="4dp" />
+
+                    <TextView
+                        android:id="@+id/progressSub"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="of 2500ml goal"
+                        android:textSize="12sp"
+                        android:textColor="@android:color/white"
+                        android:layout_marginTop="4dp" />
+                </LinearLayout>
+
+                <!-- Right Circular Progress -->
+                <FrameLayout
+                    android:layout_width="100dp"
+                    android:layout_height="100dp">
+
+                    <com.davidwxcui.waterwise.ui.home.ProgressRingView
+                        android:id="@+id/progressRing"
+                        android:layout_width="96dp"
+                        android:layout_height="96dp"
+                        android:layout_gravity="center" />
+
+                    <TextView
+                        android:id="@+id/circularProgressPercent"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="74%"
+                        android:textSize="24sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/white"
+                        android:layout_gravity="center" />
+
+                </FrameLayout>
+            </LinearLayout>
+
+            <!-- Bottom Section: Progress Bar -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                >
+
+                <ProgressBar
+                    android:id="@+id/ProgressBarValue"
+                    android:layout_width="match_parent"
+                    android:layout_height="15dp"
+                    style="@android:style/Widget.ProgressBar.Horizontal"
+                    android:progress="10"
+                    android:max="100"
+                    android:progressDrawable="@drawable/progress_bar"
+                    android:layout_marginBottom="8dp"
+                    android:layout_marginTop="8dp"/>
 
                 <TextView
                     android:id="@+id/remainingText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="No drinks logged yet"
-                    android:textSize="13sp"
-                    android:paddingTop="6dp"/>
+                    android:text="350ml remaining"
+                    android:textSize="12sp"
+                    android:textColor="@android:color/white" />
             </LinearLayout>
         </LinearLayout>
 
+        <!-- Quick Add Section -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -79,25 +175,359 @@
             android:paddingTop="16dp"
             android:paddingBottom="8dp"/>
 
+
+        <!-- Drinks Grid -->
         <GridLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:columnCount="3"
             android:rowCount="3"
             android:alignmentMode="alignMargins"
-            android:useDefaultMargins="true">
+            android:useDefaultMargins="true"
+            android:spacing="12dp">
 
-            <Button android:id="@+id/btnWater"     android:layout_width="0dp" android:layout_height="40dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:text="WATER"/>
-            <Button android:id="@+id/btnTea"       android:layout_width="0dp" android:layout_height="40dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:text="TEA"/>
-            <Button android:id="@+id/btnCoffee"    android:layout_width="0dp" android:layout_height="40dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:text="COFFEE"/>
+            <!-- Water -->
+            <LinearLayout
+                android:id="@+id/btnWater"
+                android:layout_width="0dp"
+                android:layout_height="120dp"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="@drawable/rounded_grey_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_margin="6dp">
 
-            <Button android:id="@+id/btnJuice"     android:layout_width="0dp" android:layout_height="40dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:text="JUICE"/>
-            <Button android:id="@+id/btnSoda"      android:layout_width="0dp" android:layout_height="40dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:text="SODA"/>
-            <Button android:id="@+id/btnMilk"      android:layout_width="0dp" android:layout_height="40dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:text="MILK"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="💧"
+                    android:textSize="32sp"
+                    android:textColor="@color/black"/>
 
-            <Button android:id="@+id/btnYogurt"    android:layout_width="0dp" android:layout_height="40dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:text="YOGURT"/>
-            <Button android:id="@+id/btnAlcohol"   android:layout_width="0dp" android:layout_height="40dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:text="ALCOHOL"/>
-            <Button android:id="@+id/btnSparkling" android:layout_width="0dp" android:layout_height="40dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:text="SPARKLING"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Water"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/black" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="250ml"
+                    android:textSize="10sp"
+                    android:textColor="@color/black" />
+            </LinearLayout>
+
+            <!-- Tea -->
+            <LinearLayout
+                android:id="@+id/btnTea"
+                android:layout_width="0dp"
+                android:layout_height="120dp"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="@drawable/rounded_grey_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_margin="6dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🍵"
+                    android:textSize="32sp"
+                    android:textColor="@color/black" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tea"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/black"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="200ml"
+                    android:textSize="10sp"
+                    android:textColor="@color/black" />
+            </LinearLayout>
+
+            <!-- Coffee -->
+            <LinearLayout
+                android:id="@+id/btnCoffee"
+                android:layout_width="0dp"
+                android:layout_height="120dp"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="@drawable/rounded_grey_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_margin="6dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="☕"
+                    android:textSize="32sp"
+                    android:textColor="@color/black"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Coffee"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/black"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="150ml"
+                    android:textSize="10sp"
+                    android:textColor="@color/black"/>
+            </LinearLayout>
+
+            <!-- Juice -->
+            <LinearLayout
+                android:id="@+id/btnJuice"
+                android:layout_width="0dp"
+                android:layout_height="120dp"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="@drawable/rounded_grey_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_margin="6dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🧃"
+                    android:textSize="32sp"
+                    android:textColor="@color/black"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Juice"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/black"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="200ml"
+                    android:textSize="10sp"
+                    android:textColor="@color/black"/>
+            </LinearLayout>
+
+            <!-- Soda -->
+            <LinearLayout
+                android:id="@+id/btnSoda"
+                android:layout_width="0dp"
+                android:layout_height="120dp"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="@drawable/rounded_grey_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_margin="6dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🥤"
+                    android:textSize="32sp"
+                    android:textColor="@color/black"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Soda"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/black"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="330ml"
+                    android:textSize="10sp"
+                    android:textColor="@color/black"/>
+            </LinearLayout>
+
+            <!-- Milk -->
+            <LinearLayout
+                android:id="@+id/btnMilk"
+                android:layout_width="0dp"
+                android:layout_height="120dp"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="@drawable/rounded_grey_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_margin="6dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🥛"
+                    android:textSize="32sp"
+                    android:textColor="@color/black"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Milk"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/black"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="250ml"
+                    android:textSize="10sp"
+                    android:textColor="@color/black" />
+            </LinearLayout>
+
+            <!-- Yogurt -->
+            <LinearLayout
+                android:id="@+id/btnYogurt"
+                android:layout_width="0dp"
+                android:layout_height="120dp"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="@drawable/rounded_grey_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_margin="6dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🥛"
+                    android:textSize="32sp"
+                    android:textColor="@color/black"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Yogurt"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/black"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="200ml"
+                    android:textSize="10sp"
+                    android:textColor="@color/black" />
+            </LinearLayout>
+
+            <!-- Alcohol -->
+            <LinearLayout
+                android:id="@+id/btnAlcohol"
+                android:layout_width="0dp"
+                android:layout_height="120dp"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="@drawable/rounded_grey_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_margin="6dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🍷"
+                    android:textSize="32sp"
+                    android:textColor="@color/black"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Alcohol"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/black"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="150ml"
+                    android:textSize="10sp"
+                    android:textColor="@color/black" />
+            </LinearLayout>
+
+            <!-- Sparkling -->
+            <LinearLayout
+                android:id="@+id/btnSparkling"
+                android:layout_width="0dp"
+                android:layout_height="120dp"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="@drawable/rounded_grey_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_margin="6dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="✨"
+                    android:textSize="32sp"
+                    android:textColor="@color/black"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sparkling"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/black"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="250ml"
+                    android:textSize="10sp"
+                    android:textColor="@color/black" />
+            </LinearLayout>
+
         </GridLayout>
 
         <!-- Timeline -->

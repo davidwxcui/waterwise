@@ -17,7 +17,8 @@ import com.davidwxcui.waterwise.data.DrinkType
 import com.davidwxcui.waterwise.databinding.FragmentHomeBinding
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-
+import java.util.Locale
+import kotlin.math.roundToInt
 class HomeFragment : Fragment() {
 
     private var _binding: FragmentHomeBinding? = null
@@ -60,6 +61,8 @@ class HomeFragment : Fragment() {
                 st.goalMl.toFloat(),
                 st.overLimit
             )
+            binding.circularProgressPercent.text =
+                String.format(Locale.US, "%d%%", ((st.intakeMl.toDouble() / st.goalMl) * 100).roundToInt())
             binding.progressMain.text =
                 getString(R.string.progress_main, st.intakeMl, st.goalMl)
             binding.progressSub.text =
@@ -72,6 +75,9 @@ class HomeFragment : Fragment() {
                 else ->
                     getString(R.string.remaining_ml, (st.goalMl - st.intakeMl))
             }
+            val progressPercent = ((st.intakeMl.toDouble() / st.goalMl) * 100).roundToInt()
+            binding.ProgressBarValue.progress = progressPercent
+            binding.ProgressBarValue.setProgress(progressPercent, true)
         }
 
         fun bindQuick(v: View, type: DrinkType) {

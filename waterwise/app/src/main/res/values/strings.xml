@@ -16,7 +16,7 @@
     <!-- Progress ring / goal -->
     <string name="progress_main">%1$d / %2$d ml</string>
     <string name="progress_effective">Effective: %1$d ml</string>
-    <string name="remaining_ml">%1$d ml left</string>
+    <string name="remaining_ml">%1$d ml remaining</string>
     <string name="over_by">Over by %1$d ml</string>
     <string name="no_drinks_yet">No drinks logged yet</string>
 
