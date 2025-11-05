@@ -54,4 +54,7 @@
         based on weight times 60 ml per kg, and after 9 pm we recommend smaller sips.
     </string>
 
+    <!-- Content descriptions -->
+    <string name="content_desc_go_back">Go back</string>
+
 </resources>

@@ -29,6 +29,10 @@ class GoalSelectionFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        binding.btnBack.setOnClickListener {
+            findNavController().navigateUp()
+        }
+
         binding.btnDrinkMore.setOnClickListener {
             viewModel.setPersonalGoal(PersonalGoal.DRINK_MORE_WATER)
             findNavController().navigate(R.id.action_goal_to_timeline)
@@ -60,4 +64,3 @@ class GoalSelectionFragment : Fragment() {
         _binding = null
     }
 }
-

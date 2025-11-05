@@ -87,6 +87,8 @@ class HeightFragment : Fragment() {
                     descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
                 }
                 binding.numberPickerInches.apply {
+                    minValue = 0
+                    maxValue = 11
                     value = 7
                     wrapSelectorWheel = false
                     descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
@@ -94,6 +96,8 @@ class HeightFragment : Fragment() {
             }
         }
 
+        binding.chipCm.isChecked = currentUnit == HeightUnit.CM
+        binding.chipFeet.isChecked = currentUnit == HeightUnit.FEET_INCHES
     }
 
     override fun onDestroyView() {
