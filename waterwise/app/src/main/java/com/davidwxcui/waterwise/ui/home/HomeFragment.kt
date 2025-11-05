@@ -13,12 +13,14 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.davidwxcui.waterwise.R
+import com.davidwxcui.waterwise.data.DrinkLog
 import com.davidwxcui.waterwise.data.DrinkType
 import com.davidwxcui.waterwise.databinding.FragmentHomeBinding
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.roundToInt
+
 class HomeFragment : Fragment() {
 
     private var _binding: FragmentHomeBinding? = null
@@ -56,13 +58,20 @@ class HomeFragment : Fragment() {
         binding.topTitle.text = getString(R.string.today_title, dateText)
 
         vm.uiState.observe(viewLifecycleOwner) { st ->
+            // 进度环
             binding.progressRing.set(
                 st.intakeMl.toFloat(),
                 st.goalMl.toFloat(),
                 st.overLimit
             )
+
+            // 百分比文字
+            val progressPercent =
+                ((st.intakeMl.toDouble() / st.goalMl) * 100).roundToInt()
             binding.circularProgressPercent.text =
-                String.format(Locale.US, "%d%%", ((st.intakeMl.toDouble() / st.goalMl) * 100).roundToInt())
+                String.format(Locale.US, "%d%%", progressPercent)
+
+            // 文本信息
             binding.progressMain.text =
                 getString(R.string.progress_main, st.intakeMl, st.goalMl)
             binding.progressSub.text =
@@ -75,7 +84,8 @@ class HomeFragment : Fragment() {
                 else ->
                     getString(R.string.remaining_ml, (st.goalMl - st.intakeMl))
             }
-            val progressPercent = ((st.intakeMl.toDouble() / st.goalMl) * 100).roundToInt()
+
+            // 线性进度条
             binding.ProgressBarValue.progress = progressPercent
             binding.ProgressBarValue.setProgress(progressPercent, true)
         }
@@ -95,6 +105,7 @@ class HomeFragment : Fragment() {
         bindQuick(binding.btnAlcohol, DrinkType.Alcohol)
         bindQuick(binding.btnSparkling, DrinkType.Sparkling)
 
+        // 智能建议卡片
         vm.uiState.observe(viewLifecycleOwner) { st ->
             val hour = nowHour()
             binding.insightCard.isVisible = true
@@ -109,6 +120,7 @@ class HomeFragment : Fragment() {
             }
         }
 
+        // 重要日子卡片
         vm.uiState.observe(viewLifecycleOwner) { st ->
             if (st.importantEvent != null &&
                 st.importantEvent.daysToEvent in 0..7
@@ -125,19 +137,23 @@ class HomeFragment : Fragment() {
             }
         }
 
+        // 今日时间线
         timelineAdapter = TimelineAdapter(
-            onEdit = { vm.editDrink(it) },
-            onDelete = { vm.deleteDrink(it.id) }
+            onEdit = { log: DrinkLog -> vm.editDrink(log) },
+            onDelete = { log: DrinkLog -> vm.deleteDrink(log.id) }
         )
         binding.timelineList.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = timelineAdapter
         }
         vm.timeline.observe(viewLifecycleOwner) { list ->
-            timelineAdapter.submitList(list.take(5))
+            val top5: List<DrinkLog> =
+                if (list.size > 5) list.subList(0, 5) else list
+            timelineAdapter.submitList(top5)
             binding.timelineEmpty.isVisible = list.isEmpty()
         }
 
+        // 轻统计
         vm.summary.observe(viewLifecycleOwner) { s ->
             binding.donut.setData(
                 s.waterRatio,
@@ -153,6 +169,7 @@ class HomeFragment : Fragment() {
         }
     }
 
+    // FAB 调用：选择饮品类型
     fun showFabQuickAdd() {
         val types = DrinkType.values()
         val labels = types.map { it.displayName }.toTypedArray()
@@ -164,6 +181,7 @@ class HomeFragment : Fragment() {
             .show()
     }
 
+    // 选择容量
     private fun showQuantityDialog(type: DrinkType) {
         val options = vm.defaultPortionsFor(type)
         val labels = (options.map { "${it} ml" } +
@@ -188,6 +206,7 @@ class HomeFragment : Fragment() {
             .show()
     }
 
+    // 自定义容量输入
     private fun showCustomInput(type: DrinkType) {
         val input = EditText(requireContext()).apply {
             inputType = InputType.TYPE_CLASS_NUMBER
