@@ -14,20 +14,28 @@ class TimelineAdapter(
 ) : ListAdapter<DrinkLog, TimelineAdapter.VH>(DIFF) {
 
     object DIFF : DiffUtil.ItemCallback<DrinkLog>() {
-        override fun areItemsTheSame(oldItem: DrinkLog, newItem: DrinkLog) = oldItem.id == newItem.id
-        override fun areContentsTheSame(oldItem: DrinkLog, newItem: DrinkLog) = oldItem == newItem
+        override fun areItemsTheSame(oldItem: DrinkLog, newItem: DrinkLog) =
+            oldItem.id == newItem.id
+
+        override fun areContentsTheSame(oldItem: DrinkLog, newItem: DrinkLog) =
+            oldItem == newItem
     }
 
     inner class VH(val b: ItemTimelineEntryBinding) : RecyclerView.ViewHolder(b.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-        val b = ItemTimelineEntryBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        val b = ItemTimelineEntryBinding.inflate(
+            LayoutInflater.from(parent.context),
+            parent,
+            false
+        )
         return VH(b)
     }
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val item = getItem(position)
-        holder.b.timeText.text = android.text.format.DateFormat.format("HH:mm", item.timeMillis)
+        holder.b.timeText.text =
+            android.text.format.DateFormat.format("HH:mm", item.timeMillis)
         holder.b.titleText.text = item.type.displayName
         holder.b.detailText.text = "${item.volumeMl} ml  •  eff. ${item.effectiveMl} ml"
 
