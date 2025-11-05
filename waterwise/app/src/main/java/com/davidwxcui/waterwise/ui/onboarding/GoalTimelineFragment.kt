@@ -29,6 +29,10 @@ class GoalTimelineFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        binding.btnBack.setOnClickListener {
+            findNavController().navigateUp()
+        }
+
         binding.btn3Days.setOnClickListener {
             viewModel.setGoalTimeline(GoalTimeline.THREE_DAYS)
             viewModel.calculateDailyGoal()
@@ -59,4 +63,3 @@ class GoalTimelineFragment : Fragment() {
         _binding = null
     }
 }
-

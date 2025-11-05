@@ -29,6 +29,10 @@ class VegetablesIntakeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        binding.btnBack.setOnClickListener {
+            findNavController().navigateUp()
+        }
+
         binding.btnRarely.setOnClickListener {
             viewModel.setVegetablesIntake(IntakeFrequency.RARELY)
             findNavController().navigate(R.id.action_vegetables_to_goal)
@@ -50,4 +54,3 @@ class VegetablesIntakeFragment : Fragment() {
         _binding = null
     }
 }
-
