@@ -15,6 +15,10 @@
         tools:replace="android:label,android:icon,android:roundIcon,android:theme">
 
         <activity
+            android:name=".ui.onboarding.OnboardingActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Waterwise" />
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>

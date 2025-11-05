@@ -1,10 +1,13 @@
 package com.davidwxcui.waterwise
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
+import com.davidwxcui.waterwise.data.OnboardingPreferences
 import com.davidwxcui.waterwise.databinding.ActivityMainBinding
+import com.davidwxcui.waterwise.ui.onboarding.OnboardingActivity
 
 class MainActivity : AppCompatActivity() {
 
@@ -12,6 +15,16 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Check if onboarding is completed
+        val onboardingPrefs = OnboardingPreferences(this)
+        if (!onboardingPrefs.isOnboardingCompleted()) {
+            // Redirect to onboarding
+            val intent = Intent(this, OnboardingActivity::class.java)
+            startActivity(intent)
+            finish()
+            return
+        }
 
         supportActionBar?.hide()
 

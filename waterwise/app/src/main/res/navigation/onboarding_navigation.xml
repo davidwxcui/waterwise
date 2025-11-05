@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/onboarding_navigation"
+    app:startDestination="@+id/welcomeFragment">
+
+    <fragment
+        android:id="@+id/welcomeFragment"
+        android:name="com.davidwxcui.waterwise.ui.onboarding.WelcomeFragment"
+        android:label="Welcome"
+        tools:layout="@layout/fragment_welcome">
+        <action
+            android:id="@+id/action_welcome_to_userInfo"
+            app:destination="@id/userInfoFragment"
+            app:enterAnim="@android:anim/slide_in_left"
+            app:exitAnim="@android:anim/slide_out_right" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/userInfoFragment"
+        android:name="com.davidwxcui.waterwise.ui.onboarding.UserInfoFragment"
+        android:label="User Info"
+        tools:layout="@layout/fragment_user_info">
+        <action
+            android:id="@+id/action_userInfo_to_gender"
+            app:destination="@id/genderFragment"
+            app:enterAnim="@android:anim/slide_in_left"
+            app:exitAnim="@android:anim/slide_out_right" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/genderFragment"
+        android:name="com.davidwxcui.waterwise.ui.onboarding.GenderFragment"
+        android:label="Gender"
+        tools:layout="@layout/fragment_gender">
+        <action
+            android:id="@+id/action_gender_to_weight"
+            app:destination="@id/weightFragment"
+            app:enterAnim="@android:anim/slide_in_left"
+            app:exitAnim="@android:anim/slide_out_right" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/weightFragment"
+        android:name="com.davidwxcui.waterwise.ui.onboarding.WeightFragment"
+        android:label="Weight"
+        tools:layout="@layout/fragment_weight">
+        <action
+            android:id="@+id/action_weight_to_height"
+            app:destination="@id/heightFragment"
+            app:enterAnim="@android:anim/slide_in_left"
+            app:exitAnim="@android:anim/slide_out_right" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/heightFragment"
+        android:name="com.davidwxcui.waterwise.ui.onboarding.HeightFragment"
+        android:label="Height"
+        tools:layout="@layout/fragment_height">
+        <action
+            android:id="@+id/action_height_to_training"
+            app:destination="@id/trainingFrequencyFragment"
+            app:enterAnim="@android:anim/slide_in_left"
+            app:exitAnim="@android:anim/slide_out_right" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/trainingFrequencyFragment"
+        android:name="com.davidwxcui.waterwise.ui.onboarding.TrainingFrequencyFragment"
+        android:label="Training Frequency"
+        tools:layout="@layout/fragment_training_frequency">
+        <action
+            android:id="@+id/action_training_to_caffeine"
+            app:destination="@id/caffeineIntakeFragment"
+            app:enterAnim="@android:anim/slide_in_left"
+            app:exitAnim="@android:anim/slide_out_right" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/caffeineIntakeFragment"
+        android:name="com.davidwxcui.waterwise.ui.onboarding.CaffeineIntakeFragment"
+        android:label="Caffeine Intake"
+        tools:layout="@layout/fragment_caffeine_intake">
+        <action
+            android:id="@+id/action_caffeine_to_vegetables"
+            app:destination="@id/vegetablesIntakeFragment"
+            app:enterAnim="@android:anim/slide_in_left"
+            app:exitAnim="@android:anim/slide_out_right" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/vegetablesIntakeFragment"
+        android:name="com.davidwxcui.waterwise.ui.onboarding.VegetablesIntakeFragment"
+        android:label="Vegetables Intake"
+        tools:layout="@layout/fragment_vegetables_intake">
+        <action
+            android:id="@+id/action_vegetables_to_goal"
+            app:destination="@id/goalSelectionFragment"
+            app:enterAnim="@android:anim/slide_in_left"
+            app:exitAnim="@android:anim/slide_out_right" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/goalSelectionFragment"
+        android:name="com.davidwxcui.waterwise.ui.onboarding.GoalSelectionFragment"
+        android:label="Personal Goal"
+        tools:layout="@layout/fragment_goal_selection">
+        <action
+            android:id="@+id/action_goal_to_timeline"
+            app:destination="@id/goalTimelineFragment"
+            app:enterAnim="@android:anim/slide_in_left"
+            app:exitAnim="@android:anim/slide_out_right" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/goalTimelineFragment"
+        android:name="com.davidwxcui.waterwise.ui.onboarding.GoalTimelineFragment"
+        android:label="Goal Timeline"
+        tools:layout="@layout/fragment_goal_timeline">
+        <action
+            android:id="@+id/action_timeline_to_result"
+            app:destination="@id/dailyGoalResultFragment"
+            app:enterAnim="@android:anim/slide_in_left"
+            app:exitAnim="@android:anim/slide_out_right" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/dailyGoalResultFragment"
+        android:name="com.davidwxcui.waterwise.ui.onboarding.DailyGoalResultFragment"
+        android:label="Your Daily Goal"
+        tools:layout="@layout/fragment_daily_goal_result" />
+
+</navigation>
