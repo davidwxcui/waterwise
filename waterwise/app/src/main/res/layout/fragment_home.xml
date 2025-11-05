@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/homeScroll"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -141,8 +142,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                >
+                android:orientation="vertical">
 
                 <ProgressBar
                     android:id="@+id/ProgressBarValue"
@@ -174,7 +174,6 @@
             android:textSize="16sp"
             android:paddingTop="16dp"
             android:paddingBottom="8dp"/>
-
 
         <!-- Drinks Grid -->
         <GridLayout
@@ -553,7 +552,8 @@
             android:id="@+id/timelineList"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:nestedScrollingEnabled="false" />
+            android:nestedScrollingEnabled="false"
+            android:overScrollMode="never" />
 
         <!-- Today Summary -->
         <TextView
@@ -642,4 +642,4 @@
             android:layout_height="24dp" />
 
     </LinearLayout>
-</ScrollView>
+</androidx.core.widget.NestedScrollView>

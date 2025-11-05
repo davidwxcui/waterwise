@@ -137,9 +137,9 @@ class HomeFragment : Fragment() {
             }
         }
 
-        // 今日时间线
+        // 今日时间线（这里换成弹窗编辑）
         timelineAdapter = TimelineAdapter(
-            onEdit = { log: DrinkLog -> vm.editDrink(log) },
+            onEdit = { log: DrinkLog -> showEditDialog(log) },
             onDelete = { log: DrinkLog -> vm.deleteDrink(log.id) }
         )
         binding.timelineList.apply {
@@ -181,7 +181,7 @@ class HomeFragment : Fragment() {
             .show()
     }
 
-    // 选择容量
+    // 选择容量（新增）
     private fun showQuantityDialog(type: DrinkType) {
         val options = vm.defaultPortionsFor(type)
         val labels = (options.map { "${it} ml" } +
@@ -206,7 +206,7 @@ class HomeFragment : Fragment() {
             .show()
     }
 
-    // 自定义容量输入
+    // 自定义容量输入（新增）
     private fun showCustomInput(type: DrinkType) {
         val input = EditText(requireContext()).apply {
             inputType = InputType.TYPE_CLASS_NUMBER
@@ -222,6 +222,26 @@ class HomeFragment : Fragment() {
                     val rounded = (v / 50) * 50
                     val finalValue = if (rounded == 0) 50 else rounded
                     vm.addDrink(type, finalValue)
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showEditDialog(log: DrinkLog) {
+        val input = EditText(requireContext()).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER
+            setText(log.volumeMl.toString())
+            setSelection(text.length)
+        }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.custom_amount_title, log.type.displayName))
+            .setView(input)
+            .setPositiveButton(R.string.add) { _, _ ->
+                val v = input.text.toString().toIntOrNull()
+                if (v != null && v > 0) {
+                    vm.updateDrinkVolume(log.id, v)
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)

@@ -155,19 +155,37 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         storage.saveAll(finalList)
     }
 
+    /**
+     * 原来你是直接 +50ml 的，这里先保留，给时间线以外的地方用。
+     * 真正的弹窗编辑用下面的 updateDrinkVolume。
+     */
     fun editDrink(item: DrinkLog) {
-        val updated = item.copy(
-            volumeMl = item.volumeMl + 50,
-            effectiveMl = ((item.volumeMl + 50) *
-                    (factor[item.type] ?: 1.0)).toInt()
-        )
-        val list = (_timeline.value ?: emptyList()).map {
-            if (it.id == item.id) updated else it
-        }
-        val finalList = list.sortedByDescending { it.timeMillis }
+        updateDrinkVolume(item.id, item.volumeMl + 50)
+    }
 
+    /**
+     * ✅ 按指定 ml 更新一条记录，弹窗要用这个
+     */
+    fun updateDrinkVolume(id: Int, newVolumeMl: Int) {
+        val current = _timeline.value.orEmpty().toMutableList()
+        val idx = current.indexOfFirst { it.id == id }
+        if (idx == -1) return
+
+        val old = current[idx]
+        val rounded = max(50, (newVolumeMl / 50) * 50)
+        val eff = (rounded * (factor[old.type] ?: 1.0)).toInt()
+        val updated = old.copy(
+            volumeMl = rounded,
+            effectiveMl = eff
+        )
+        current[idx] = updated
+
+        val finalList = current.sortedByDescending { it.timeMillis }
         _timeline.value = finalList
-        lastByType[item.type] = updated.volumeMl
+
+        // 更新“和上次一样”
+        lastByType[old.type] = rounded
+
         recompute(finalList)
         storage.saveAll(finalList)
     }
