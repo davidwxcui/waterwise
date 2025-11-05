@@ -87,19 +87,20 @@
             android:alignmentMode="alignMargins"
             android:useDefaultMargins="true">
 
-            <Button android:id="@+id/btnWater"     android:layout_width="0dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:layout_height="40dp" android:text="WATER"/>
-            <Button android:id="@+id/btnTea"       android:layout_width="0dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:layout_height="40dp" android:text="TEA"/>
-            <Button android:id="@+id/btnCoffee"    android:layout_width="0dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:layout_height="40dp" android:text="COFFEE"/>
+            <Button android:id="@+id/btnWater"     android:layout_width="0dp" android:layout_height="40dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:text="WATER"/>
+            <Button android:id="@+id/btnTea"       android:layout_width="0dp" android:layout_height="40dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:text="TEA"/>
+            <Button android:id="@+id/btnCoffee"    android:layout_width="0dp" android:layout_height="40dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:text="COFFEE"/>
 
-            <Button android:id="@+id/btnJuice"     android:layout_width="0dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:layout_height="40dp" android:text="JUICE"/>
-            <Button android:id="@+id/btnSoda"      android:layout_width="0dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:layout_height="40dp" android:text="SODA"/>
-            <Button android:id="@+id/btnMilk"      android:layout_width="0dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:layout_height="40dp" android:text="MILK"/>
+            <Button android:id="@+id/btnJuice"     android:layout_width="0dp" android:layout_height="40dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:text="JUICE"/>
+            <Button android:id="@+id/btnSoda"      android:layout_width="0dp" android:layout_height="40dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:text="SODA"/>
+            <Button android:id="@+id/btnMilk"      android:layout_width="0dp" android:layout_height="40dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:text="MILK"/>
 
-            <Button android:id="@+id/btnYogurt"    android:layout_width="0dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:layout_height="40dp" android:text="YOGURT"/>
-            <Button android:id="@+id/btnAlcohol"   android:layout_width="0dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:layout_height="40dp" android:text="ALCOHOL"/>
-            <Button android:id="@+id/btnSparkling" android:layout_width="0dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:layout_height="40dp" android:text="SPARKLING"/>
+            <Button android:id="@+id/btnYogurt"    android:layout_width="0dp" android:layout_height="40dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:text="YOGURT"/>
+            <Button android:id="@+id/btnAlcohol"   android:layout_width="0dp" android:layout_height="40dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:text="ALCOHOL"/>
+            <Button android:id="@+id/btnSparkling" android:layout_width="0dp" android:layout_height="40dp" android:layout_gravity="fill" android:layout_columnWeight="1" android:text="SPARKLING"/>
         </GridLayout>
 
+        <!-- Timeline -->
         <TextView
             android:id="@+id/timelineHeader"
             android:layout_width="wrap_content"
@@ -124,6 +125,7 @@
             android:layout_height="wrap_content"
             android:nestedScrollingEnabled="false" />
 
+        <!-- Today Summary -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

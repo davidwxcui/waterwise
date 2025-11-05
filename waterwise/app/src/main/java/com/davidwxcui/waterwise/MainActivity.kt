@@ -9,12 +9,11 @@ import com.davidwxcui.waterwise.ui.home.HomeFragment
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private var currentDest: Int = R.id.nav_home
+    private var currentDest: Int = R.id.navigation_home
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // NO ActionBar
         supportActionBar?.hide()
 
         binding = ActivityMainBinding.inflate(layoutInflater)

@@ -5,7 +5,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Fragment  -->
     <FrameLayout
         android:id="@+id/container"
         android:layout_width="0dp"
@@ -15,7 +14,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Botton -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottomNav"
         android:layout_width="0dp"
@@ -27,7 +25,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- FAB -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab"
         android:layout_width="64dp"
@@ -35,15 +32,8 @@
         android:layout_marginBottom="8dp"
         app:srcCompat="@drawable/outline_add_24"
         app:tint="@android:color/white"
-
-        app:borderWidth="0dp"
-        app:useCompatPadding="false"
-        android:padding="20dp"
-        android:scaleType="center"
         app:layout_constraintBottom_toTopOf="@id/bottomNav"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
-
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>

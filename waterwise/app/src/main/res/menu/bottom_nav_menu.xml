@@ -11,6 +11,12 @@
         android:icon="@drawable/analytics_24dp_e3e3e3_fill0_wght400_grad0_opsz24"
         android:title="@string/title_dashboard" />
 
+    <!-- Spacer item for center gap -->
+    <item
+        android:id="@+id/navigation_spacer"
+        android:enabled="false"
+        android:title="" />
+
     <item
         android:id="@+id/navigation_notifications"
         android:icon="@drawable/event_24dp_e3e3e3_fill0_wght400_grad0_opsz24"
