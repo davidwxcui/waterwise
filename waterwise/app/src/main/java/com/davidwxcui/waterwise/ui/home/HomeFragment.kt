@@ -1,36 +1,220 @@
 package com.davidwxcui.waterwise.ui.home
 
+import android.app.AlertDialog
+import android.os.Build
 import android.os.Bundle
+import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
+import android.widget.EditText
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.viewModels
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.davidwxcui.waterwise.R
+import com.davidwxcui.waterwise.data.DrinkType
 import com.davidwxcui.waterwise.databinding.FragmentHomeBinding
-
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import kotlin.math.roundToInt
 class HomeFragment : Fragment() {
 
     private var _binding: FragmentHomeBinding? = null
-
-    // This property is only valid between onCreateView and
-    // onDestroyView.
     private val binding get() = _binding!!
+    private val vm: HomeViewModel by viewModels()
+    private lateinit var timelineAdapter: TimelineAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val homeViewModel =
-            ViewModelProvider(this).get(HomeViewModel::class.java)
-
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
-        val root: View = binding.root
+        return binding.root
+    }
 
+    private fun nowHour(): Int {
+        return if (Build.VERSION.SDK_INT >= 26) {
+            LocalDateTime.now().hour
+        } else {
+            java.util.Calendar.getInstance()
+                .get(java.util.Calendar.HOUR_OF_DAY)
+        }
+    }
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        val dateText = if (Build.VERSION.SDK_INT >= 26) {
+            LocalDateTime.now().format(DateTimeFormatter.ofPattern("EEE, MMM d"))
+        } else {
+            java.text.SimpleDateFormat(
+                "EEE, MMM d",
+                java.util.Locale.US
+            ).format(java.util.Date())
+        }
+        binding.topTitle.text = getString(R.string.today_title, dateText)
 
-        return root
+        vm.uiState.observe(viewLifecycleOwner) { st ->
+            binding.progressRing.set(
+                st.intakeMl.toFloat(),
+                st.goalMl.toFloat(),
+                st.overLimit
+            )
+            binding.circularProgressPercent.text =
+                String.format(Locale.US, "%d%%", ((st.intakeMl.toDouble() / st.goalMl) * 100).roundToInt())
+            binding.progressMain.text =
+                getString(R.string.progress_main, st.intakeMl, st.goalMl)
+            binding.progressSub.text =
+                getString(R.string.progress_effective, st.effectiveMl)
+            binding.remainingText.text = when {
+                st.intakeMl > st.goalMl ->
+                    getString(R.string.over_by, (st.intakeMl - st.goalMl))
+                st.intakeMl == 0 ->
+                    getString(R.string.no_drinks_yet)
+                else ->
+                    getString(R.string.remaining_ml, (st.goalMl - st.intakeMl))
+            }
+            val progressPercent = ((st.intakeMl.toDouble() / st.goalMl) * 100).roundToInt()
+            binding.ProgressBarValue.progress = progressPercent
+            binding.ProgressBarValue.setProgress(progressPercent, true)
+        }
+
+        fun bindQuick(v: View, type: DrinkType) {
+            v.setOnClickListener { showQuantityDialog(type) }
+            v.contentDescription = type.displayName
+        }
+
+        bindQuick(binding.btnWater, DrinkType.Water)
+        bindQuick(binding.btnTea, DrinkType.Tea)
+        bindQuick(binding.btnCoffee, DrinkType.Coffee)
+        bindQuick(binding.btnJuice, DrinkType.Juice)
+        bindQuick(binding.btnSoda, DrinkType.Soda)
+        bindQuick(binding.btnMilk, DrinkType.Milk)
+        bindQuick(binding.btnYogurt, DrinkType.Yogurt)
+        bindQuick(binding.btnAlcohol, DrinkType.Alcohol)
+        bindQuick(binding.btnSparkling, DrinkType.Sparkling)
+
+        vm.uiState.observe(viewLifecycleOwner) { st ->
+            val hour = nowHour()
+            binding.insightCard.isVisible = true
+            binding.insightWhy.setOnClickListener { showWhyDialog() }
+            binding.insightText.text = when {
+                hour >= 21 ->
+                    getString(R.string.insight_late_small_sips)
+                st.caffeineRatio > 0.4 ->
+                    getString(R.string.insight_high_caffeine)
+                else ->
+                    getString(R.string.insight_suggest_now, vm.recommendNextMl())
+            }
+        }
+
+        vm.uiState.observe(viewLifecycleOwner) { st ->
+            if (st.importantEvent != null &&
+                st.importantEvent.daysToEvent in 0..7
+            ) {
+                binding.eventCard.isVisible = true
+                binding.eventTitle.text = getString(
+                    R.string.event_title_fmt,
+                    st.importantEvent.name,
+                    st.importantEvent.daysToEvent
+                )
+                binding.eventTip.text = st.importantEvent.todayTip
+            } else {
+                binding.eventCard.isVisible = false
+            }
+        }
+
+        timelineAdapter = TimelineAdapter(
+            onEdit = { vm.editDrink(it) },
+            onDelete = { vm.deleteDrink(it.id) }
+        )
+        binding.timelineList.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = timelineAdapter
+        }
+        vm.timeline.observe(viewLifecycleOwner) { list ->
+            timelineAdapter.submitList(list.take(5))
+            binding.timelineEmpty.isVisible = list.isEmpty()
+        }
+
+        vm.summary.observe(viewLifecycleOwner) { s ->
+            binding.donut.setData(
+                s.waterRatio,
+                s.caffeineRatio,
+                s.sugaryRatio
+            )
+            binding.summaryText.text = getString(
+                R.string.summary_text_fmt,
+                (s.waterRatio * 100).toInt(),
+                (s.caffeineRatio * 100).toInt(),
+                (s.sugaryRatio * 100).toInt()
+            )
+        }
+    }
+
+    fun showFabQuickAdd() {
+        val types = DrinkType.values()
+        val labels = types.map { it.displayName }.toTypedArray()
+        AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.add))
+            .setItems(labels) { _, which ->
+                showQuantityDialog(types[which])
+            }
+            .show()
+    }
+
+    private fun showQuantityDialog(type: DrinkType) {
+        val options = vm.defaultPortionsFor(type)
+        val labels = (options.map { "${it} ml" } +
+                listOf(
+                    getString(R.string.same_as_last_time),
+                    getString(R.string.custom_ellipsis)
+                ))
+            .toTypedArray()
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.add_drink_title, type.displayName))
+            .setItems(labels) { _, which ->
+                when {
+                    which < options.size ->
+                        vm.addDrink(type, options[which])
+                    labels[which] == getString(R.string.same_as_last_time) ->
+                        vm.addSameAsLast(type)
+                    else ->
+                        showCustomInput(type)
+                }
+            }
+            .show()
+    }
+
+    private fun showCustomInput(type: DrinkType) {
+        val input = EditText(requireContext()).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER
+            hint = "e.g., 250"
+        }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.custom_amount_title, type.displayName))
+            .setView(input)
+            .setPositiveButton(R.string.add) { _, _ ->
+                val v = input.text.toString().toIntOrNull()
+                if (v != null && v > 0) {
+                    val rounded = (v / 50) * 50
+                    val finalValue = if (rounded == 0) 50 else rounded
+                    vm.addDrink(type, finalValue)
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showWhyDialog() {
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.why_title)
+            .setMessage(getString(R.string.why_message))
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
     }
 
     override fun onDestroyView() {
