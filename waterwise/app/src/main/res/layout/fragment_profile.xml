@@ -326,8 +326,19 @@
             android:textColor="@android:color/white"
             android:background="@drawable/bg_button_gradient"/>
 
+        <!-- Reset Goal Button -->
+        <Button
+            android:id="@+id/btnResetGoal"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="12dp"
+            android:text="Reset Daily Goal"
+            android:textAllCaps="false"
+            android:textColor="#0F6BFF"
+            android:background="@drawable/bg_button_outline"/>
+
         <Space
             android:layout_width="match_parent"
-            android:layout_height="24dp"/>
+            android:layout_height="200dp"/>
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

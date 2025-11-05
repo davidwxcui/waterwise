@@ -8,6 +8,7 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.davidwxcui.waterwise.R
 import com.davidwxcui.waterwise.databinding.FragmentProfileBinding
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class ProfileFragment : Fragment() {
 
@@ -24,8 +25,13 @@ class ProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         render(ProfilePrefs.load(requireContext()))
+
         binding.btnEdit.setOnClickListener {
             findNavController().navigate(R.id.action_profile_to_edit)
+        }
+
+        binding.btnResetGoal.setOnClickListener {
+            resetDailyGoal()
         }
     }
 
@@ -62,6 +68,25 @@ class ProfileFragment : Fragment() {
             p.weightKg.toFloat(), p.sex, p.age, p.activity
         )
         binding.tvGoal.text = "${goal}ml"
+    }
+
+    private fun resetDailyGoal() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Reset Daily Goal")
+            .setMessage("This will restart the onboarding process so you can recalculate your daily hydration goal with updated information.\n\nDo you want to continue?")
+            .setPositiveButton("Reset") { _, _ ->
+                // Clear onboarding completion status
+                val onboardingPrefs = com.davidwxcui.waterwise.data.OnboardingPreferences(requireContext())
+                onboardingPrefs.setOnboardingCompleted(false)
+
+                // Navigate to onboarding
+                val intent = android.content.Intent(requireActivity(), com.davidwxcui.waterwise.ui.onboarding.OnboardingActivity::class.java)
+                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+                startActivity(intent)
+                requireActivity().finish()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     override fun onDestroyView() {

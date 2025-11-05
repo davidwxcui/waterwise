@@ -7,6 +7,8 @@ import androidx.lifecycle.MutableLiveData
 import com.davidwxcui.waterwise.data.CsvDrinkStorage
 import com.davidwxcui.waterwise.data.DrinkLog
 import com.davidwxcui.waterwise.data.DrinkType
+import com.davidwxcui.waterwise.ui.profile.HydrationFormula
+import com.davidwxcui.waterwise.ui.profile.ProfilePrefs
 import kotlin.math.max
 import kotlin.math.min
 
@@ -15,10 +17,15 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     // 本地 CSV 存储：/data/data/com.davidwxcui.waterwise/files/drinkLog.csv
     private val storage = CsvDrinkStorage(getApplication())
 
-    // 配置：目标与上限
-    private val weightKg = 70
-    private val dailyCoeff = 35  // ml/kg 目标
-    private val limitCoeff = 60  // ml/kg 上限
+    // Load profile to get accurate daily goal
+    private val profile = ProfilePrefs.load(application)
+    private val dailyGoalMl = HydrationFormula.dailyGoalMl(
+        profile.weightKg.toFloat(),
+        profile.sex,
+        profile.age,
+        profile.activity
+    )
+    private val limitCoeff = 60  // ml/kg upper limit
 
     // 各饮品折算系数
     private val factor = mapOf(
@@ -69,8 +76,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         UIState(
             intakeMl = 0,
             effectiveMl = 0,
-            goalMl = weightKg * dailyCoeff,
-            limitMl = weightKg * limitCoeff,
+            goalMl = dailyGoalMl,
+            limitMl = profile.weightKg * limitCoeff,
             overLimit = false,
             caffeineRatio = 0.0,
             importantEvent = ImportantEvent(
@@ -193,8 +200,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private fun recompute(list: List<DrinkLog>) {
         val intake = list.sumOf { it.volumeMl }
         val effective = list.sumOf { it.effectiveMl }
-        val goal = weightKg * dailyCoeff
-        val limit = weightKg * limitCoeff
+        val goal = dailyGoalMl
+        val limit = profile.weightKg * limitCoeff
         val over = intake > limit
 
         val totalEff = max(1, effective)
