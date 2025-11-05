@@ -19,11 +19,13 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Initial fragment
         if (savedInstanceState == null) {
             openHome()
         }
 
-        binding.bottomNav.setOnItemSelectedListener { item ->
+        // Bottom navigation
+        binding.navView.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.navigation_home -> {
                     if (currentDest != R.id.navigation_home) openHome()
@@ -33,7 +35,7 @@ class MainActivity : AppCompatActivity() {
                 R.id.navigation_dashboard,
                 R.id.navigation_notifications,
                 R.id.navigation_profile -> {
-                    // Placeholder
+                    // Placeholder for other tabs
                     currentDest = item.itemId
                     true
                 }
@@ -41,19 +43,21 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        binding.fab.setOnClickListener {
-            val f = supportFragmentManager.findFragmentById(binding.container.id)
+        // FAB click
+        binding.fabAdd.setOnClickListener {
+            val f = supportFragmentManager.findFragmentById(R.id.nav_host_fragment_activity_main)
             if (f is HomeFragment) {
                 f.showFabQuickAdd()
             }
         }
 
-        binding.bottomNav.selectedItemId = R.id.navigation_home
+        // Set default selected tab
+        binding.navView.selectedItemId = R.id.navigation_home
     }
 
     private fun openHome() {
         supportFragmentManager.commit {
-            replace(binding.container.id, HomeFragment())
+            replace(R.id.nav_host_fragment_activity_main, HomeFragment())
         }
     }
 }
