@@ -35,6 +35,10 @@ nav {
   background-clip: text;
   text-decoration: none;
 }
+.logo a {
+    text-decoration: none; 
+    color: inherit;      
+}
 
 .nav-links {
   display: flex;
