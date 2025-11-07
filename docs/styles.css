@@ -432,6 +432,7 @@ nav {
                 flex-direction: column;
                 text-align: center;
                 padding: 3rem 5%;
+                padding-top: 150px;
             }
 
             .hero-title {
