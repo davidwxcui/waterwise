@@ -65,10 +65,6 @@ class DashboardFragment : Fragment() {
         binding.btnTypeFilter.setOnClickListener { showTypePickerDialog() }
         binding.btnDateRange.setOnClickListener { showDateRangePicker() }
 
-        showHistory(true)
-        binding.btnHistory.setOnClickListener { showHistory(true) }
-        binding.btnAnalyze.setOnClickListener { showHistory(false) }
-
         binding.rootScroll.clipToPadding = false
         binding.rootScroll.updatePadding(
             bottom = resources.getDimensionPixelSize(
@@ -413,7 +409,7 @@ class DashboardFragment : Fragment() {
     // ---------- History Table----------
     private fun updateHistoryTable(rows: List<DrinkRow>) {
         val table: TableLayout = binding.tableHistory
-        while (table.childCount > 1) table.removeViewAt(1)
+        table.removeAllViews()
 
         if (rows.isEmpty()) {
             val row = TableRow(requireContext())
@@ -441,7 +437,7 @@ class DashboardFragment : Fragment() {
                 textAlignment = TextView.TEXT_ALIGNMENT_CENTER
                 setPadding(dp(10), dp(6), dp(10), dp(6))
                 layoutParams = TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1f)
-                setTextColor(Color.BLACK) // 你之前要的“方案3：黑色文字”
+                setTextColor(Color.BLACK)
                 background = GradientDrawable().apply {
                     cornerRadius = dp(14).toFloat()
                     setColor(withAlpha(typeColor, 0.18f))
@@ -470,15 +466,8 @@ class DashboardFragment : Fragment() {
         this.text = text
         textAlignment = gravity
         layoutParams = TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, weight)
-        setTextColor(textColor) // 默认黑色
+        setTextColor(textColor)
     }
 
     private fun dp(v: Int): Int = (resources.displayMetrics.density * v).roundToInt()
-
-    private fun showHistory(show: Boolean) {
-        binding.containerHistory.visibility = if (show) View.VISIBLE else View.GONE
-        binding.containerAnalyze.visibility = if (show) View.GONE else View.VISIBLE
-        binding.btnHistory.alpha = if (show) 1f else 0.6f
-        binding.btnAnalyze.alpha = if (show) 0.6f else 1f
-    }
 }
