@@ -1,210 +1,247 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/rootScroll"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
-    android:clipToPadding="false">
+    android:background="#F5F7FA"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:paddingHorizontal="20dp"
+        android:paddingTop="40dp"
+        android:paddingBottom="100dp">
 
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardGraph"
+        <!-- Header -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="serif"
+            android:text="Statistics"
+            android:textColor="#0D1F3C"
+            android:textSize="32sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Your hydration insights"
+            android:textColor="#6B7280"
+            android:textSize="16sp" />
+
+        <!-- Filter Buttons -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardUseCompatPadding="true"
-            app:cardCornerRadius="20dp">
+            android:layout_marginTop="24dp"
+            android:orientation="horizontal"
+            android:gravity="start">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnTypeFilter"
+                style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="12dp"
+                android:backgroundTint="#F0F2F5"
+                android:minWidth="0dp"
+                android:paddingHorizontal="16dp"
+                android:text="Type"
+                android:textAllCaps="false"
+                android:textColor="#6B7280"
+                android:textSize="14sp"
+                app:cornerRadius="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDateRange"
+                style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="#F0F2F5"
+                android:minWidth="0dp"
+                android:paddingHorizontal="16dp"
+                android:text="Date Range"
+                android:textAllCaps="false"
+                android:textColor="#6B7280"
+                android:textSize="14sp"
+                app:cornerRadius="8dp" />
+        </LinearLayout>
+
+        <!-- Line Chart -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            app:cardBackgroundColor="@android:color/white"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="2dp"
+            app:strokeWidth="0dp">
+
+            <lecho.lib.hellocharts.view.LineChartView
+                android:id="@+id/lineChart"
+                android:layout_width="match_parent"
+                android:layout_height="220dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp"
+                android:layout_marginHorizontal="16dp" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:id="@+id/tvEmptyChart"
+            android:layout_width="match_parent"
+            android:layout_height="220dp"
+            android:layout_marginTop="24dp"
+            android:gravity="center"
+            android:text="No data available"
+            android:textColor="#9CA3AF"
+            android:textSize="16sp"
+            android:visibility="gone" />
+
+        <!-- Weekly Overview Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            app:cardBackgroundColor="@android:color/white"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="2dp"
+            app:strokeWidth="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="12dp"
-                android:background="@drawable/gradient_blue2">
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="serif"
+                    android:text="Weekly Overview"
+                    android:textColor="#0D1F3C"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
 
                 <lecho.lib.hellocharts.view.ColumnChartView
                     android:id="@+id/columnChart"
                     android:layout_width="match_parent"
-                    android:layout_height="220dp"
-                    android:layout_marginBottom="8dp"
-                    android:background="@android:color/transparent" />
-
-                <FrameLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="280dp">
-
-                    <lecho.lib.hellocharts.view.LineChartView
-                        android:id="@+id/lineChart"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:background="@android:color/transparent" />
-
-                    <TextView
-                        android:id="@+id/tvEmptyChart"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:gravity="center"
-                        android:text="No records yet"
-                        android:textSize="14sp"
-                        android:textColor="#9AA0A6"
-                        android:visibility="gone" />
-                </FrameLayout>
+                    android:layout_height="200dp"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="12dp" />
 
                 <LinearLayout
-                    android:id="@+id/rowActions"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:layout_marginTop="8dp"
-                    android:weightSum="2">
+                    android:weightSum="7">
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnTypeFilter"
+                    <TextView
                         android:layout_width="0dp"
-                        android:layout_height="40dp"
+                        android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:layout_marginEnd="8dp"
-                        android:text="Drink Types"
-                        android:textAllCaps="false"
-                        android:textColor="@android:color/white"
-                        android:background="@drawable/bg_button_gradient"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp" />
+                        android:gravity="center"
+                        android:text="M"
+                        android:textColor="#9CA3AF"
+                        android:textSize="12sp" />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnDateRange"
+                    <TextView
                         android:layout_width="0dp"
-                        android:layout_height="40dp"
+                        android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:layout_marginStart="8dp"
-                        android:text="Date Range"
-                        android:textAllCaps="false"
-                        android:textColor="@android:color/white"
-                        android:background="@drawable/bg_button_gradient"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp" />
+                        android:gravity="center"
+                        android:text="T"
+                        android:textColor="#9CA3AF"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:text="W"
+                        android:textColor="#9CA3AF"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:text="T"
+                        android:textColor="#9CA3AF"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:text="F"
+                        android:textColor="#9CA3AF"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:text="S"
+                        android:textColor="#9CA3AF"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:text="S"
+                        android:textColor="#9CA3AF"
+                        android:textSize="12sp" />
                 </LinearLayout>
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <LinearLayout
-            android:id="@+id/tabButtons"
+        <!-- Drink History Card -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:orientation="horizontal">
+            android:layout_marginTop="24dp"
+            app:cardBackgroundColor="@android:color/white"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="2dp"
+            app:strokeWidth="0dp">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnHistory"
-                style="@style/Widget.MaterialComponents.Button"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_weight="1"
-                android:layout_marginEnd="8dp"
-                android:text="History"
-                android:textAllCaps="false"
-                android:textColor="@android:color/white"
-                android:background="@drawable/bg_button_gradient"
-                android:insetTop="0dp"
-                android:insetBottom="0dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnAnalyze"
-                style="@style/Widget.MaterialComponents.Button"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_weight="1"
-                android:layout_marginStart="8dp"
-                android:text="Analyze"
-                android:textAllCaps="false"
-                android:textColor="@android:color/white"
-                android:background="@drawable/bg_button_gradient"
-                android:insetTop="0dp"
-                android:insetBottom="0dp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/containerHistory"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:orientation="vertical">
-
-            <TableLayout
-                android:id="@+id/tableHistory"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:shrinkColumns="*"
-                android:stretchColumns="*">
+                android:orientation="vertical"
+                android:padding="20dp">
 
-                <TableRow
-                    android:paddingHorizontal="12dp"
-                    android:paddingVertical="10dp">
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Date"
-                        android:textStyle="bold"
-                        android:textColor="@android:color/black" />
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Type"
-                        android:textStyle="bold"
-                        android:gravity="center"
-                        android:textColor="@android:color/black" />
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Intake"
-                        android:textStyle="bold"
-                        android:gravity="end"
-                        android:textColor="@android:color/black" />
-                </TableRow>
-            </TableLayout>
-        </LinearLayout>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="serif"
+                    android:text="Drink History"
+                    android:textColor="#0D1F3C"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
 
-        <LinearLayout
-            android:id="@+id/containerAnalyze"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:orientation="vertical"
-            android:visibility="gone">
+                <TableLayout
+                    android:id="@+id/tableHistory"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:stretchColumns="*" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnGeneral"
-                style="@style/Widget.MaterialComponents.Button"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:text="General"
-                android:textAllCaps="false"
-                android:textColor="@android:color/white"
-                android:background="@drawable/bg_button_gradient"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:layout_marginBottom="12dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnAI"
-                style="@style/Widget.MaterialComponents.Button"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:text="AI"
-                android:textAllCaps="false"
-                android:textColor="@android:color/white"
-                android:background="@drawable/bg_button_gradient"
-                android:insetTop="0dp"
-                android:insetBottom="0dp" />
-        </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>
