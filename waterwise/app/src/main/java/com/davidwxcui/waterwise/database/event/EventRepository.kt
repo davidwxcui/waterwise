@@ -1,6 +1,4 @@
-package com.davidwxcui.waterwise.database
-import com.davidwxcui.waterwise.database.EventDao
-import com.davidwxcui.waterwise.database.Event
+package com.davidwxcui.waterwise.database.event
 import kotlinx.coroutines.flow.Flow
 
 class EventRepository(private val eventDao: EventDao) {

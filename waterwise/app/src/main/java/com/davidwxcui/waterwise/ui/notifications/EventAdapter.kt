@@ -5,7 +5,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.davidwxcui.waterwise.database.Event
+import com.davidwxcui.waterwise.database.event.Event
 import com.davidwxcui.waterwise.databinding.ItemEventBinding
 import com.daimajia.swipe.SwipeLayout
 import com.google.android.material.shape.ShapeAppearanceModel

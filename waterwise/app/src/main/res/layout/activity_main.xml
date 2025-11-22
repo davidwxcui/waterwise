@@ -27,6 +27,8 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
+        app:itemTextColor="@color/bottom_nav_text_color"
+        app:itemIconTint="@color/bottom_nav_text_color"
         app:labelVisibilityMode="labeled"
         app:menu="@menu/bottom_nav_menu" />
 
@@ -42,6 +44,7 @@
         app:layout_constraintBottom_toBottomOf="@+id/nav_view"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:elevation="10dp" />
+        app:elevation="10dp"
+        app:pressedTranslationZ="12dp" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
