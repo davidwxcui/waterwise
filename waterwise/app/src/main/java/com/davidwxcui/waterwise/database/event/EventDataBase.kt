@@ -1,6 +1,4 @@
-package com.davidwxcui.waterwise.database
-import com.davidwxcui.waterwise.database.EventDao
-import com.davidwxcui.waterwise.database.Event
+package com.davidwxcui.waterwise.database.event
 import android.content.Context
 import androidx.room.Database
 import androidx.room.Room

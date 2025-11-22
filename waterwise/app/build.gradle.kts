@@ -75,4 +75,5 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
     // AndroidSwipeLayout
     implementation("com.daimajia.swipelayout:library:1.2.0@aar")
+
 }

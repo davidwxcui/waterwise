@@ -1,5 +1,4 @@
-package com.davidwxcui.waterwise.database
-import com.davidwxcui.waterwise.database.Event
+package com.davidwxcui.waterwise.database.event
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 
