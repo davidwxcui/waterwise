@@ -4,20 +4,22 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.davidwxcui.waterwise.data.CsvDrinkStorage
 import com.davidwxcui.waterwise.data.DrinkLog
 import com.davidwxcui.waterwise.data.DrinkType
+import com.davidwxcui.waterwise.data.FirestoreDrinkStorage
 import com.davidwxcui.waterwise.ui.profile.HydrationFormula
 import com.davidwxcui.waterwise.ui.profile.ProfilePrefs
+import com.google.firebase.auth.FirebaseAuth
 import kotlin.math.max
 import kotlin.math.min
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
-    // 本地 CSV 存储：/data/data/com.davidwxcui.waterwise/files/drinkLog.csv
-    private val storage = CsvDrinkStorage(getApplication())
+    private val storage = FirestoreDrinkStorage()
 
-    // Load profile to get accurate daily goal
+    // For log in，暂时使用固定 uid；登录做完后换成 FirebaseAuth.getInstance().currentUser!!.uid
+    private val uid = "local-test-user"
+
     private val profile = ProfilePrefs.load(application)
     private val dailyGoalMl = HydrationFormula.dailyGoalMl(
         profile.weightKg.toFloat(),
@@ -25,9 +27,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         profile.age,
         profile.activity
     )
-    private val limitCoeff = 60  // ml/kg upper limit
+    private val limitCoeff = 60
 
-    // 各饮品折算系数
     private val factor = mapOf(
         DrinkType.Water to 1.0,
         DrinkType.Tea to 0.9,
@@ -40,7 +41,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         DrinkType.Sparkling to 1.0
     )
 
-    // 默认份量（全部 50 的倍数）
     private val defaultPortions = mapOf(
         DrinkType.Water to listOf(200, 250, 500),
         DrinkType.Tea to listOf(200, 300),
@@ -80,11 +80,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             limitMl = profile.weightKg * limitCoeff,
             overLimit = false,
             caffeineRatio = 0.0,
-            importantEvent = ImportantEvent(
-                "10K Run",
-                3,
-                "Tip: +300 ml water today"
-            )
+            importantEvent = ImportantEvent("10K Run", 3, "Tip: +300 ml water today")
         )
     )
     val uiState: LiveData<UIState> = _uiState
@@ -97,46 +93,45 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _summary = MutableLiveData(Summary(0.0, 0.0, 0.0))
     val summary: LiveData<Summary> = _summary
-
     private var idSeed = 1
-    private val lastByType: MutableMap<DrinkType, Int> = mutableMapOf()
+    private val lastByType = mutableMapOf<DrinkType, Int>()
 
-    init {
-        // 启动时从 CSV 读所有记录
-        val loaded = storage.loadAll()
-            .sortedByDescending { it.timeMillis }
-            .mapIndexed { index, log ->
-                log.copy(id = index + 1)
-            }
 
-        _timeline.value = loaded
-        idSeed = (loaded.maxOfOrNull { it.id } ?: 0) + 1
+    private val registration = storage.listenDrinkLogs(
+        uid = uid,
+        onUpdate = { list ->
+            val ordered = list.sortedByDescending { it.timeMillis }
+            _timeline.postValue(ordered)
 
-        // 恢复“和上次一样”的缓存
-        loaded.forEach { log ->
-            lastByType[log.type] = log.volumeMl
+            idSeed = (ordered.maxOfOrNull { it.id } ?: 0) + 1
+            ordered.forEach { lastByType[it.type] = it.volumeMl }
+
+            recompute(ordered)
         }
+    )
 
-        recompute(loaded)
+
+    override fun onCleared() {
+        super.onCleared()
+        registration.remove()
     }
+
 
     fun defaultPortionsFor(t: DrinkType): List<Int> =
         defaultPortions[t] ?: listOf(200, 250, 500)
 
+
     fun addSameAsLast(type: DrinkType) {
-        val v = lastByType[type]
-        if (v != null) {
-            addDrink(type, v)
-        } else {
-            val mid = defaultPortionsFor(type).getOrNull(1) ?: 200
-            addDrink(type, mid)
-        }
+        val v = lastByType[type] ?: defaultPortionsFor(type).getOrNull(1) ?: 200
+        addDrink(type, v)
     }
+
 
     fun addDrink(type: DrinkType, volumeMl: Int) {
         val rounded = max(50, (volumeMl / 50) * 50)
         val eff = (rounded * (factor[type] ?: 1.0)).toInt()
-        val new = DrinkLog(
+
+        val log = DrinkLog(
             id = idSeed++,
             type = type,
             volumeMl = rounded,
@@ -144,94 +139,79 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             note = null,
             timeMillis = System.currentTimeMillis()
         )
+
         lastByType[type] = rounded
 
-        val list = listOf(new) + (_timeline.value ?: emptyList())
-        val finalList = list.sortedByDescending { it.timeMillis }
-
-        _timeline.value = finalList
-        recompute(finalList)
-        storage.saveAll(finalList)
+        storage.addDrinkLog(uid, log)
     }
+
 
     fun deleteDrink(id: Int) {
-        val list = _timeline.value ?: emptyList()
-        val finalList = list.filterNot { it.id == id }
-        _timeline.value = finalList
-        recompute(finalList)
-        storage.saveAll(finalList)
+        val list = _timeline.value ?: return
+        val target = list.find { it.id == id } ?: return
+        storage.deleteDrinkLog(uid, target)
     }
 
-    /**
-     * 原来你是直接 +50ml 的，这里先保留，给时间线以外的地方用。
-     * 真正的弹窗编辑用下面的 updateDrinkVolume。
-     */
+
     fun editDrink(item: DrinkLog) {
         updateDrinkVolume(item.id, item.volumeMl + 50)
     }
 
-    /**
-     * ✅ 按指定 ml 更新一条记录，弹窗要用这个
-     */
-    fun updateDrinkVolume(id: Int, newVolumeMl: Int) {
-        val current = _timeline.value.orEmpty().toMutableList()
-        val idx = current.indexOfFirst { it.id == id }
-        if (idx == -1) return
 
-        val old = current[idx]
+    fun updateDrinkVolume(id: Int, newVolumeMl: Int) {
+        val list = _timeline.value ?: return
+        val target = list.find { it.id == id } ?: return
+
         val rounded = max(50, (newVolumeMl / 50) * 50)
-        val eff = (rounded * (factor[old.type] ?: 1.0)).toInt()
-        val updated = old.copy(
+        val eff = (rounded * (factor[target.type] ?: 1.0)).toInt()
+
+        val updated = target.copy(
             volumeMl = rounded,
             effectiveMl = eff
         )
-        current[idx] = updated
 
-        val finalList = current.sortedByDescending { it.timeMillis }
-        _timeline.value = finalList
+        lastByType[target.type] = rounded
 
-        // 更新“和上次一样”
-        lastByType[old.type] = rounded
-
-        recompute(finalList)
-        storage.saveAll(finalList)
+        storage.updateDrinkLog(uid, updated)
     }
+
 
     private fun recompute(list: List<DrinkLog>) {
         val intake = list.sumOf { it.volumeMl }
         val effective = list.sumOf { it.effectiveMl }
         val goal = dailyGoalMl
         val limit = profile.weightKg * limitCoeff
-        val over = intake > limit
 
         val totalEff = max(1, effective)
         val caffeineEff = list
             .filter { it.type == DrinkType.Coffee || it.type == DrinkType.Tea }
             .sumOf { it.effectiveMl }.toDouble() / totalEff
         val sugaryEff = list
-            .filter {
-                it.type == DrinkType.Juice ||
-                        it.type == DrinkType.Soda ||
-                        it.type == DrinkType.Yogurt
-            }
+            .filter { it.type == DrinkType.Juice || it.type == DrinkType.Soda || it.type == DrinkType.Yogurt }
             .sumOf { it.effectiveMl }.toDouble() / totalEff
+
         val waterEff = min(1.0, 1.0 - caffeineEff - sugaryEff)
 
-        _uiState.value = _uiState.value?.copy(
-            intakeMl = intake,
-            effectiveMl = effective,
-            goalMl = goal,
-            limitMl = limit,
-            overLimit = over,
-            caffeineRatio = caffeineEff
+        _uiState.postValue(
+            _uiState.value?.copy(
+                intakeMl = intake,
+                effectiveMl = effective,
+                goalMl = goal,
+                limitMl = limit,
+                overLimit = intake > limit,
+                caffeineRatio = caffeineEff
+            )
         )
 
-        _summary.value = Summary(
-            waterRatio = waterEff.coerceIn(0.0, 1.0),
-            caffeineRatio = caffeineEff.coerceIn(0.0, 1.0),
-            sugaryRatio = sugaryEff.coerceIn(0.0, 1.0)
+        _summary.postValue(
+            Summary(
+                waterRatio = waterEff,
+                caffeineRatio = caffeineEff,
+                sugaryRatio = sugaryEff
+            )
         )
     }
+
 
     fun recommendNextMl(): Int {
         val st = _uiState.value ?: return 250

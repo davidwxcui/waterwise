@@ -12,11 +12,17 @@ enum class DrinkType(val displayName: String) {
     Sparkling("Sparkling water")
 }
 
+/**
+ * Firestore 需要：
+ * 1. 所有字段有默认值
+ * 2. data class 必须能无参构造
+ */
 data class DrinkLog(
-    val id: Int,
-    val type: DrinkType,
-    val volumeMl: Int,
-    val effectiveMl: Int,
-    val note: String?,
-    val timeMillis: Long
+    val id: Int = 0,
+    val type: DrinkType = DrinkType.Water,
+    val volumeMl: Int = 0,
+    val effectiveMl: Int = 0,
+    val note: String? = null,
+    val timeMillis: Long = 0L,
+    val uid: String = ""     // Firestore 下必须知道属于谁
 )
