@@ -9,7 +9,10 @@
 ### User Profile & Personalization
 - Create a **personal profile** with name, email, age, gender, height, weight, and activity level.
 - Real-time **daily hydration goal preview** based on profile inputs.
-- Change **avatar** via camera or gallery.
+- Change **avatar** via camera or gallery. 
+- Added local register / login / logout flow for account management (backend-ready). 
+- Generated a short unique UID per user and displayed it with one-tap copy. 
+- Supported guest mode → logged-in mode switch to update profile data after authentication.
 
 ### Hydration Tracking
 - Track multiple beverages: water, tea, coffee, juice, milk, soda, yogurt drinks, alcohol, sparkling water.
