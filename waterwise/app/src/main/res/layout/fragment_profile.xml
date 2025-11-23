@@ -33,7 +33,7 @@
             android:textColor="#7A8A9A"
             android:layout_marginTop="4dp"/>
 
-        <!-- Avatar + Name + Email -->
+        <!-- Avatar / Name / Email -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -78,7 +78,7 @@
                 android:layout_marginTop="4dp"/>
         </LinearLayout>
 
-        <!-- Personal Information Card -->
+        <!-- Personal Information card -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -92,15 +92,43 @@
                 android:orientation="vertical"
                 android:padding="16dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <!-- Title + UID -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Personal Information"
-                    android:textStyle="bold"
-                    android:textColor="#1E2A3A"
-                    android:textSize="16sp"/>
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
 
-                <!-- Age/Gender、Height/Weight -->
+                    <TextView
+                        android:id="@+id/tvPersonalTitle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Personal Information"
+                        android:textStyle="bold"
+                        android:textColor="#1E2A3A"
+                        android:textSize="16sp"/>
+
+                    <TextView
+                        android:id="@+id/tvUid"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="UID: —"
+                        android:textSize="12sp"
+                        android:textColor="#7A8A9A"
+                        android:layout_marginEnd="6dp"/>
+
+                    <ImageButton
+                        android:id="@+id/btnCopyUid"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_copy"
+                        app:srcCompat="@drawable/ic_copy"
+                        android:visibility="gone"/>
+                </LinearLayout>
+
+                <!-- Age / Gender / Height / Weight -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -119,12 +147,14 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:orientation="vertical">
+
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Age"
                                 android:textColor="#7A8A9A"
                                 android:textSize="12sp"/>
+
                             <TextView
                                 android:id="@+id/tvAge"
                                 android:layout_width="wrap_content"
@@ -139,12 +169,14 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:orientation="vertical">
+
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Gender"
                                 android:textColor="#7A8A9A"
                                 android:textSize="12sp"/>
+
                             <TextView
                                 android:id="@+id/tvGender"
                                 android:layout_width="wrap_content"
@@ -168,12 +200,14 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:orientation="vertical">
+
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Height"
                                 android:textColor="#7A8A9A"
                                 android:textSize="12sp"/>
+
                             <TextView
                                 android:id="@+id/tvHeight"
                                 android:layout_width="wrap_content"
@@ -188,12 +222,14 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:orientation="vertical">
+
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Weight"
                                 android:textColor="#7A8A9A"
                                 android:textSize="12sp"/>
+
                             <TextView
                                 android:id="@+id/tvWeight"
                                 android:layout_width="wrap_content"
@@ -208,7 +244,7 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Activity Level Card -->
+        <!-- Activity Level card -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -258,7 +294,7 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Daily Goal Card -->
+        <!-- Daily Goal card -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -315,7 +351,7 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Edit Button -->
+        <!-- Edit / Login button -->
         <Button
             android:id="@+id/btnEdit"
             android:layout_width="match_parent"
@@ -326,7 +362,19 @@
             android:textColor="@android:color/white"
             android:background="@drawable/bg_button_gradient"/>
 
-        <!-- Reset Goal Button -->
+        <!-- Logout button -->
+        <Button
+            android:id="@+id/btnLogout"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="10dp"
+            android:text="Logout"
+            android:textAllCaps="false"
+            android:textColor="#0F6BFF"
+            android:background="@drawable/bg_button_outline"
+            android:visibility="gone"/>
+
+        <!-- Reset Goal button -->
         <Button
             android:id="@+id/btnResetGoal"
             android:layout_width="match_parent"
@@ -340,5 +388,6 @@
         <Space
             android:layout_width="match_parent"
             android:layout_height="200dp"/>
+
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>
