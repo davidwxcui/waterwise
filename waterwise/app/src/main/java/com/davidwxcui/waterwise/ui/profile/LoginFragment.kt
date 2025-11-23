@@ -13,10 +13,8 @@ import androidx.navigation.fragment.findNavController
 import com.davidwxcui.waterwise.R
 import com.davidwxcui.waterwise.databinding.FragmentLoginBinding
 import com.google.android.material.snackbar.Snackbar
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.math.ceil
 
 class LoginFragment : Fragment() {
@@ -24,40 +22,8 @@ class LoginFragment : Fragment() {
     private var _binding: FragmentLoginBinding? = null
     private val binding get() = _binding!!
 
-    // ======= Backend placeholder =======
-    private interface AuthApi {
-        suspend fun login(email: String, password: String): Result<String>
-    }
-
-    // Local demo version (using SharedPreferences)
-    private val api: AuthApi = object : AuthApi {
-        override suspend fun login(email: String, password: String): Result<String> =
-            withContext(Dispatchers.IO) {
-                val sp = requireContext().getSharedPreferences(AUTH_FILE, Context.MODE_PRIVATE)
-                val regEmail = sp.getString(KEY_REGISTERED_EMAIL, null)
-                val regHash = sp.getString(KEY_REGISTERED_PWD_HASH, null)
-                val uid = sp.getString(KEY_UID, null)
-                if (regEmail.isNullOrBlank() || regHash.isNullOrBlank() || uid.isNullOrBlank()) {
-                    return@withContext Result.failure(Exception("No account found, please register"))
-                }
-
-                val inputHash = sha256(password)
-                if (email != regEmail) {
-                    return@withContext Result.failure(Exception("Email not registered"))
-                }
-                if (inputHash != regHash) {
-                    return@withContext Result.failure(Exception("Incorrect password"))
-                }
-
-                sp.edit()
-                    .putBoolean(KEY_LOGGED_IN, true)
-                    .putString(KEY_TOKEN, "local_token_$uid")
-                    .apply()
-
-                Result.success("local_token_$uid")
-            }
-    }
-    // ===================================
+    // backend
+    private val api: AuthApi = FirebaseAuthRepository
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -69,11 +35,10 @@ class LoginFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 
         val local = ProfilePrefs.load(requireContext())
-        binding.tvAvatarInitial.text = (local.name.firstOrNull() ?: 'U').uppercaseChar().toString()
+        binding.tvAvatarInitial.text = (local.name.firstOrNull() ?: 'U')
+            .uppercaseChar().toString()
 
-        // ---------------------
         // Real-time validation
-        // ---------------------
         fun validateInputs(): Boolean {
             val email = binding.etEmail.text?.toString()?.trim()?.lowercase().orEmpty()
             val pw = binding.etPassword.text?.toString()?.trim().orEmpty()
@@ -92,9 +57,7 @@ class LoginFragment : Fragment() {
         binding.etPassword.doAfterTextChanged { validateInputs() }
         validateInputs()
 
-        // ---------------------
         // Login click
-        // ---------------------
         binding.btnLogin.setOnClickListener {
             if (!validateInputs()) {
                 Snackbar.make(binding.root, "Please fix errors", Snackbar.LENGTH_SHORT).show()
@@ -103,6 +66,7 @@ class LoginFragment : Fragment() {
 
             val email = binding.etEmail.text!!.trim().toString().lowercase()
             val pw = binding.etPassword.text!!.trim().toString()
+
             val sp = requireContext().getSharedPreferences(AUTH_FILE, Context.MODE_PRIVATE)
 
             val lockUntil = sp.getLong(KEY_LOCK_UNTIL, 0L)
@@ -116,12 +80,18 @@ class LoginFragment : Fragment() {
             binding.btnLogin.isEnabled = false
 
             lifecycleScope.launch {
-                val result = api.login(email, pw)
+                val result = api.login(requireContext(), email, pw)
                 if (result.isSuccess) {
+                    val user = result.getOrNull()!!
+
                     sp.edit()
                         .putInt(KEY_FAIL_COUNT, 0)
                         .putLong(KEY_LOCK_UNTIL, 0L)
+                        .putString(KEY_UID, user.uid)
+                        .putString(KEY_TOKEN, user.token)
+                        .putBoolean(KEY_LOGGED_IN, true)
                         .apply()
+
                     Snackbar.make(binding.root, "Login successful", Snackbar.LENGTH_SHORT).show()
                     delay(200)
                     findNavController().popBackStack()
@@ -135,7 +105,11 @@ class LoginFragment : Fragment() {
                         Snackbar.make(binding.root, "Locked for 30s after 5 failures", Snackbar.LENGTH_SHORT).show()
                     } else {
                         editor.apply()
-                        Snackbar.make(binding.root, result.exceptionOrNull()?.message ?: "Login failed ($fail/5)", Snackbar.LENGTH_SHORT).show()
+                        Snackbar.make(
+                            binding.root,
+                            result.exceptionOrNull()?.message ?: "Login failed ($fail/5)",
+                            Snackbar.LENGTH_SHORT
+                        ).show()
                     }
                 }
                 binding.btnLogin.isEnabled = true
@@ -148,11 +122,6 @@ class LoginFragment : Fragment() {
         }
     }
 
-    private fun sha256(s: String): String {
-        val bytes = java.security.MessageDigest.getInstance("SHA-256").digest(s.toByteArray())
-        return bytes.joinToString("") { "%02x".format(it) }
-    }
-
     override fun onDestroyView() {
         _binding = null
         super.onDestroyView()
@@ -163,8 +132,6 @@ class LoginFragment : Fragment() {
         private const val KEY_UID = "uid"
         private const val KEY_TOKEN = "auth_token"
         private const val KEY_LOGGED_IN = "loggedIn"
-        private const val KEY_REGISTERED_EMAIL = "registered_email"
-        private const val KEY_REGISTERED_PWD_HASH = "registered_pwd_hash"
         private const val KEY_FAIL_COUNT = "fail_count"
         private const val KEY_LOCK_UNTIL = "lock_until"
     }

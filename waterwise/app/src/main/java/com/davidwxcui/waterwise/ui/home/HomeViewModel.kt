@@ -7,9 +7,10 @@ import androidx.lifecycle.MutableLiveData
 import com.davidwxcui.waterwise.data.DrinkLog
 import com.davidwxcui.waterwise.data.DrinkType
 import com.davidwxcui.waterwise.data.FirestoreDrinkStorage
+import com.davidwxcui.waterwise.ui.profile.FirebaseAuthRepository
 import com.davidwxcui.waterwise.ui.profile.HydrationFormula
 import com.davidwxcui.waterwise.ui.profile.ProfilePrefs
-import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.ListenerRegistration
 import kotlin.math.max
 import kotlin.math.min
 
@@ -17,9 +18,13 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val storage = FirestoreDrinkStorage()
 
-    // For log in，暂时使用固定 uid；登录做完后换成 FirebaseAuth.getInstance().currentUser!!.uid
-    private val uid = "local-test-user"
+    /**
+     * uid from firebase Auth
+     */
+    private val uid: String?
+        get() = FirebaseAuthRepository.currentUid()
 
+    // Load profile
     private val profile = ProfilePrefs.load(application)
     private val dailyGoalMl = HydrationFormula.dailyGoalMl(
         profile.weightKg.toFloat(),
@@ -93,41 +98,52 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _summary = MutableLiveData(Summary(0.0, 0.0, 0.0))
     val summary: LiveData<Summary> = _summary
+
     private var idSeed = 1
     private val lastByType = mutableMapOf<DrinkType, Int>()
 
+    private var registration: ListenerRegistration? = null
 
-    private val registration = storage.listenDrinkLogs(
-        uid = uid,
-        onUpdate = { list ->
-            val ordered = list.sortedByDescending { it.timeMillis }
-            _timeline.postValue(ordered)
+    init {
+        startListen()
+    }
 
-            idSeed = (ordered.maxOfOrNull { it.id } ?: 0) + 1
-            ordered.forEach { lastByType[it.type] = it.volumeMl }
+    private fun startListen() {
+        val realUid = uid ?: return  // if not log in then do not write any thing
 
-            recompute(ordered)
-        }
-    )
+        registration?.remove()
+        registration = storage.listenDrinkLogs(
+            uid = realUid,
+            onUpdate = { list ->
+                val ordered = list.sortedByDescending { it.timeMillis }
+                _timeline.postValue(ordered)
 
+                idSeed = (ordered.maxOfOrNull { it.id } ?: 0) + 1
+                ordered.forEach { lastByType[it.type] = it.volumeMl }
+
+                recompute(ordered)
+            },
+            onError = {
+                // keep silent for now
+            }
+        )
+    }
 
     override fun onCleared() {
         super.onCleared()
-        registration.remove()
+        registration?.remove()
     }
-
 
     fun defaultPortionsFor(t: DrinkType): List<Int> =
         defaultPortions[t] ?: listOf(200, 250, 500)
-
 
     fun addSameAsLast(type: DrinkType) {
         val v = lastByType[type] ?: defaultPortionsFor(type).getOrNull(1) ?: 200
         addDrink(type, v)
     }
 
-
     fun addDrink(type: DrinkType, volumeMl: Int) {
+        val realUid = uid ?: return
         val rounded = max(50, (volumeMl / 50) * 50)
         val eff = (rounded * (factor[type] ?: 1.0)).toInt()
 
@@ -141,24 +157,22 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         )
 
         lastByType[type] = rounded
-
-        storage.addDrinkLog(uid, log)
+        storage.addDrinkLog(realUid, log)
     }
-
 
     fun deleteDrink(id: Int) {
+        val realUid = uid ?: return
         val list = _timeline.value ?: return
         val target = list.find { it.id == id } ?: return
-        storage.deleteDrinkLog(uid, target)
+        storage.deleteDrinkLog(realUid, target)
     }
-
 
     fun editDrink(item: DrinkLog) {
         updateDrinkVolume(item.id, item.volumeMl + 50)
     }
 
-
     fun updateDrinkVolume(id: Int, newVolumeMl: Int) {
+        val realUid = uid ?: return
         val list = _timeline.value ?: return
         val target = list.find { it.id == id } ?: return
 
@@ -171,10 +185,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         )
 
         lastByType[target.type] = rounded
-
-        storage.updateDrinkLog(uid, updated)
+        storage.updateDrinkLog(realUid, updated)
     }
-
 
     private fun recompute(list: List<DrinkLog>) {
         val intake = list.sumOf { it.volumeMl }
@@ -187,7 +199,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             .filter { it.type == DrinkType.Coffee || it.type == DrinkType.Tea }
             .sumOf { it.effectiveMl }.toDouble() / totalEff
         val sugaryEff = list
-            .filter { it.type == DrinkType.Juice || it.type == DrinkType.Soda || it.type == DrinkType.Yogurt }
+            .filter {
+                it.type == DrinkType.Juice ||
+                        it.type == DrinkType.Soda ||
+                        it.type == DrinkType.Yogurt
+            }
             .sumOf { it.effectiveMl }.toDouble() / totalEff
 
         val waterEff = min(1.0, 1.0 - caffeineEff - sugaryEff)
@@ -205,13 +221,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
         _summary.postValue(
             Summary(
-                waterRatio = waterEff,
-                caffeineRatio = caffeineEff,
-                sugaryRatio = sugaryEff
+                waterRatio = waterEff.coerceIn(0.0, 1.0),
+                caffeineRatio = caffeineEff.coerceIn(0.0, 1.0),
+                sugaryRatio = sugaryEff.coerceIn(0.0, 1.0)
             )
         )
     }
-
 
     fun recommendNextMl(): Int {
         val st = _uiState.value ?: return 250

@@ -12,9 +12,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.davidwxcui.waterwise.databinding.FragmentRegisterBinding
 import com.google.android.material.snackbar.Snackbar
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.security.MessageDigest
 import java.util.UUID
 
@@ -24,23 +22,9 @@ class RegisterFragment : Fragment() {
     private val binding get() = _binding!!
 
     /**
-     * Backend placeholder. Replace this with real network call later.
+     * Backend placeholder
      */
-    private interface ProfileApi {
-        suspend fun register(name: String, email: String, password: String): Result<String> // return token
-    }
-
-    // Demo implementation, local only.
-    private val api: ProfileApi = object : ProfileApi {
-        override suspend fun register(name: String, email: String, password: String): Result<String> =
-            withContext(Dispatchers.IO) {
-                if (name.isNotBlank() && email.isNotBlank() && password.isNotBlank()) {
-                    Result.success("local_register_token")
-                } else {
-                    Result.failure(Exception("Please fill all fields"))
-                }
-            }
-    }
+    private val api: AuthApi = FirebaseAuthRepository
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentRegisterBinding.inflate(inflater, container, false)
@@ -113,7 +97,7 @@ class RegisterFragment : Fragment() {
             }
 
             // Short UID (10 chars)
-            val uid = UUID.randomUUID()
+            val legacyLocalUid = UUID.randomUUID()
                 .toString()
                 .replace("-", "")
                 .take(10)
@@ -123,18 +107,20 @@ class RegisterFragment : Fragment() {
             binding.btnRegister.isEnabled = false
 
             lifecycleScope.launch {
-                val res = api.register(name, email, pw1)
+                val res = api.register(requireContext(), name, email, pw1)
                 if (res.isFailure) {
                     Snackbar.make(binding.root, res.exceptionOrNull()?.message ?: "Register failed", Snackbar.LENGTH_SHORT).show()
                     binding.btnRegister.isEnabled = true
                     return@launch
                 }
 
-                val token = res.getOrNull()!!
+                val user = res.getOrNull()!!
+                val uid = user.uid
+                val token = user.token
 
                 // Save local auth
                 sp.edit()
-                    .putString(KEY_UID, uid)
+                    .putString(KEY_UID, uid) // use Firebase uid
                     .putString(KEY_REGISTERED_EMAIL, email)
                     .putString(KEY_REGISTERED_PWD_HASH, pwdHash)
                     .putBoolean(KEY_LOGGED_IN, true)
