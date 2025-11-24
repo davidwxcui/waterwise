@@ -27,8 +27,11 @@
         android:id="@+id/navigation_profile"
         android:name="com.davidwxcui.waterwise.ui.profile.ProfileFragment"
         android:label="@string/title_profile"
-        tools:layout="@layout/fragment_profile" >
+        tools:layout="@layout/fragment_profile">
 
+        <action
+            android:id="@+id/action_profile_to_login"
+            app:destination="@id/navigation_login" />
 
         <action
             android:id="@+id/action_profile_to_edit"
@@ -37,8 +40,27 @@
 
 
     <fragment
+        android:id="@+id/navigation_login"
+        android:name="com.davidwxcui.waterwise.ui.profile.LoginFragment"
+        android:label="Login"
+        tools:layout="@layout/fragment_login">
+
+        <action
+            android:id="@+id/action_login_to_register"
+            app:destination="@id/navigation_register" />
+    </fragment>
+
+
+    <fragment
+        android:id="@+id/navigation_register"
+        android:name="com.davidwxcui.waterwise.ui.profile.RegisterFragment"
+        android:label="Register"
+        tools:layout="@layout/fragment_register" />
+
+    <fragment
         android:id="@+id/navigation_edit_profile"
         android:name="com.davidwxcui.waterwise.ui.profile.EditProfileFragment"
         android:label="Edit Profile"
         tools:layout="@layout/fragment_edit_profile" />
+
 </navigation>

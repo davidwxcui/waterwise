@@ -266,4 +266,10 @@ class HomeFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
+
+    override fun onResume() {
+        super.onResume()
+        vm.refreshListeners()   // ← 关键：重新挂监听 + 强制抓一次 drink logs
+    }
+
 }
