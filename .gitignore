@@ -3,4 +3,11 @@ waterwise/.idea/copilotDiffState.xml
 waterwise/.idea/copilot.data.migration.agent.xml
 waterwise/.idea/copilot.data.migration.edit.xml
 waterwise/.idea/misc.xml
-waterwise/.idea/misc.xml
+/.idea
+/waterwise/.idea
+/waterwise/.idea
+/waterwise/caches
+/waterwise/android
+/waterwise/daemon
+/waterwise/native
+/waterwise/wrapper
