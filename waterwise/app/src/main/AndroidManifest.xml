@@ -23,7 +23,7 @@
             android:exported="false"
             android:theme="@style/Theme.Waterwise" />
         <activity
-            android:name=".MainActivity"
+            android:name=".minigame.GameActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
