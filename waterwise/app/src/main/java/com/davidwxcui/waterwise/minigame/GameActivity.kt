@@ -5,6 +5,7 @@ import android.animation.AnimatorListenerAdapter
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
+import android.content.Intent
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.*
@@ -12,6 +13,8 @@ import android.widget.LinearLayout
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.davidwxcui.waterwise.R
+import com.davidwxcui.waterwise.MainActivity
+import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlin.math.min
 import kotlin.random.Random
@@ -19,10 +22,10 @@ import kotlin.random.Random
 // ================== DATA MODELS ==================
 
 data class PlayerState(
-    val coins: Int = 100000,              // 初始金币调高到 100000
+    val coins: Int = 100000,              // 初始金币（适配×100）
     val position: Int = 0,
     val diceLeft: Int = 20,
-    val ownedProperties: List<String> = emptyList() // list of property IDs
+    val ownedProperties: List<String> = emptyList()
 )
 
 data class EventChoice(
@@ -62,40 +65,19 @@ class GameActivity : AppCompatActivity() {
         private const val DOCUMENT_ID = "player1"
     }
 
-    // 8x5 outer ring, 22 tiles, starting from top-left going clockwise
+    // 8x5 outer ring positions, 22 tiles, clockwise
     private val tilePositions = listOf(
         // Top row (5)
-        0 to 0,  // 0
-        0 to 1,  // 1
-        0 to 2,  // 2
-        0 to 3,  // 3
-        0 to 4,  // 4
-
+        0 to 0, 0 to 1, 0 to 2, 0 to 3, 0 to 4,
         // Right column (7)
-        1 to 4,  // 5
-        2 to 4,  // 6
-        3 to 4,  // 7
-        4 to 4,  // 8
-        5 to 4,  // 9
-        6 to 4,  // 10
-        7 to 4,  // 11
-
+        1 to 4, 2 to 4, 3 to 4, 4 to 4, 5 to 4, 6 to 4, 7 to 4,
         // Bottom row (4)
-        7 to 3,  // 12
-        7 to 2,  // 13
-        7 to 1,  // 14
-        7 to 0,  // 15
-
+        7 to 3, 7 to 2, 7 to 1, 7 to 0,
         // Left column (6)
-        6 to 0,  // 16
-        5 to 0,  // 17
-        4 to 0,  // 18
-        3 to 0,  // 19
-        2 to 0,  // 20
-        1 to 0   // 21
+        6 to 0, 5 to 0, 4 to 0, 3 to 0, 2 to 0, 1 to 0
     )
 
-    // 所有产业类型（金额还是×100，但整体更贵，收益更低，回本更慢）
+    // 7 properties (price & income already ×100, tuned harder)
     private val allProperties = listOf(
         PropertyInfo("coffee", "Coffee Shop", price = 40000, incomePerTurn = 3000),
         PropertyInfo("book", "Book Store", price = 60000, incomePerTurn = 4000),
@@ -106,9 +88,8 @@ class GameActivity : AppCompatActivity() {
         PropertyInfo("bank", "Bank", price = 200000, incomePerTurn = 15000)
     )
 
-    // propertyId -> tileIndex
+    // propertyId -> tileIndex / tileIndex -> propertyId
     private val propertyIdToTile = mutableMapOf<String, Int>()
-    // tileIndex -> propertyId
     private val tileToPropertyId = mutableMapOf<Int, String>()
 
     // propertyId -> icon drawable
@@ -121,17 +102,12 @@ class GameActivity : AppCompatActivity() {
         "mall" to R.drawable.ic_property_mall,
         "bank" to R.drawable.ic_property_bank
     )
-
     private val randomTileIconRes = R.drawable.ic_tile_random
 
     // Dice faces
     private val diceDrawables = intArrayOf(
-        R.drawable.dice_1,
-        R.drawable.dice_2,
-        R.drawable.dice_3,
-        R.drawable.dice_4,
-        R.drawable.dice_5,
-        R.drawable.dice_6
+        R.drawable.dice_1, R.drawable.dice_2, R.drawable.dice_3,
+        R.drawable.dice_4, R.drawable.dice_5, R.drawable.dice_6
     )
 
     // Views
@@ -139,7 +115,7 @@ class GameActivity : AppCompatActivity() {
     private lateinit var tvDiceLeft: TextView
     private lateinit var tvEvent: TextView
     private lateinit var btnRollDice: Button
-    private lateinit var btnAddDice: Button
+    private lateinit var btnAddDice: Button   // now Back button
     private lateinit var boardGrid: GridLayout
     private lateinit var boardContainer: FrameLayout
     private lateinit var diceImageView: ImageView
@@ -148,19 +124,21 @@ class GameActivity : AppCompatActivity() {
 
     private var playerState = PlayerState()
 
-    // 棋盘格子视图：容器+图标
+    // Board tiles
     private val tileContainers = mutableListOf<LinearLayout>()
     private val tileIconViews = mutableListOf<ImageView>()
-
     private val tileEvents = mutableMapOf<Int, TileEventTemplate>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_game)
 
+        // ✅ FIX: ensure Firebase initialized before any Firestore call
+        FirebaseApp.initializeApp(this)
+
+        setContentView(R.layout.activity_game)
         initViews()
 
-        // Layout board & dice based on container size
+        // Layout board & dice after container measured
         boardContainer.post {
             val w = boardContainer.width
             val h = boardContainer.height
@@ -185,14 +163,11 @@ class GameActivity : AppCompatActivity() {
 
         btnRollDice.setOnClickListener { onRollDice() }
 
-        // 临时：一键加 1000 次骰子
+        // Back to FirestoreRoomStorage page
         btnAddDice.setOnClickListener {
-            playerState = playerState.copy(
-                diceLeft = playerState.diceLeft + 1000
-            )
-            updateUI()
-            savePlayerStateToFirebase()
-            Toast.makeText(this, "Added 1000 dice!", Toast.LENGTH_SHORT).show()
+            val intent = Intent(this, MainActivity::class.java)
+            startActivity(intent)
+            finish()
         }
     }
 
@@ -207,7 +182,7 @@ class GameActivity : AppCompatActivity() {
         diceImageView = findViewById(R.id.diceImageView)
     }
 
-    // ---------------- BOARD & EVENTS ----------------
+    // ---------------- BOARD ----------------
 
     private fun initBoard() {
         tileContainers.clear()
@@ -217,43 +192,33 @@ class GameActivity : AppCompatActivity() {
         boardGrid.columnCount = 5
 
         for (i in 0 until TOTAL_TILES) {
-            // 外层容器
             val container = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
                 setBackgroundResource(android.R.drawable.btn_default)
             }
 
-            // 图标
             val iconView = ImageView(this).apply {
                 layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    0,
-                    2f
+                    LinearLayout.LayoutParams.MATCH_PARENT, 0, 2f
                 )
                 scaleType = ImageView.ScaleType.CENTER_INSIDE
-                setImageResource(randomTileIconRes) // 默认问号
+                setImageResource(randomTileIconRes)
             }
 
-            // 底部数字
             val textView = TextView(this).apply {
                 text = i.toString()
                 textSize = 12f
                 gravity = Gravity.CENTER
                 layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    0,
-                    1f
+                    LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
                 )
             }
 
             container.addView(iconView)
             container.addView(textView)
 
-            // 点击格子查看详情（只有在没有事件进行时）
-            container.setOnClickListener {
-                onTileClicked(i)
-            }
+            container.setOnClickListener { onTileClicked(i) }
 
             val (row, col) = tilePositions[i]
             val params = GridLayout.LayoutParams().apply {
@@ -272,26 +237,25 @@ class GameActivity : AppCompatActivity() {
         updateTileIcons()
     }
 
-    /** 事件模板：这里重做了数值 & 概率，整体负面更狠，正面更难 / 更小 */
+    // ---------------- EVENTS (Rebalanced) ----------------
+
     private fun initTileEvents() {
         val treasureEvent = TileEventTemplate(
             title = "Treasure Chest",
             description = "You discover a mysterious treasure chest on the road.",
             choices = listOf(
-                // 高风险高收益：期望值略负
                 EventChoice(
                     label = "Open it boldly",
                     successDescription = "The chest is full of gold!",
-                    failDescription = "It was a trap! A blast scares you and you drop a lot of coins.",
+                    failDescription = "It was a trap! You lose a lot of coins.",
                     successCoinDelta = +40000,
                     failCoinDelta = -60000,
                     successRatePercent = 40
                 ),
-                // 稍微保守一点：期望值略正
                 EventChoice(
                     label = "Inspect carefully",
-                    successDescription = "You safely find some coins inside.",
-                    failDescription = "It's mostly junk, some effort is wasted.",
+                    successDescription = "You find some coins safely.",
+                    failDescription = "Mostly junk, some effort wasted.",
                     successCoinDelta = +15000,
                     failCoinDelta = -5000,
                     successRatePercent = 75
@@ -303,20 +267,18 @@ class GameActivity : AppCompatActivity() {
             title = "Toll Gate",
             description = "You arrive at a toll gate guarded by a strict officer.",
             choices = listOf(
-                // 乖乖付：必亏，但损失稳定
                 EventChoice(
                     label = "Pay the full toll",
-                    successDescription = "You pass smoothly and feel relieved.",
-                    failDescription = "The officer still finds a problem and adds extra fees.",
-                    successCoinDelta = -12000,  // 常规损失
-                    failCoinDelta = -25000,     // 偶尔更狠
+                    successDescription = "You pass smoothly.",
+                    failDescription = "Extra fees are added.",
+                    successCoinDelta = -12000,
+                    failCoinDelta = -25000,
                     successRatePercent = 80
                 ),
-                // 讨价还价：期望值更负
                 EventChoice(
                     label = "Try to bargain",
-                    successDescription = "You negotiate successfully and pay less.",
-                    failDescription = "Negotiation fails, heavy fine is added.",
+                    successDescription = "You pay less.",
+                    failDescription = "Heavy fine for wasting time.",
                     successCoinDelta = -5000,
                     failCoinDelta = -40000,
                     successRatePercent = 45
@@ -326,22 +288,20 @@ class GameActivity : AppCompatActivity() {
 
         val lotteryEvent = TileEventTemplate(
             title = "Street Lottery",
-            description = "A street vendor invites you to buy a lottery ticket.",
+            description = "A vendor invites you to buy a lottery ticket.",
             choices = listOf(
-                // 豪赌：大正、大负、成功率低
                 EventChoice(
                     label = "Buy an expensive ticket",
-                    successDescription = "Jackpot! You win a huge prize.",
-                    failDescription = "No luck at all. You burn a pile of money.",
+                    successDescription = "Jackpot! Huge prize.",
+                    failDescription = "No luck. Big loss.",
                     successCoinDelta = +60000,
                     failCoinDelta = -30000,
                     successRatePercent = 25
                 ),
-                // 小赌：轻盈一些
                 EventChoice(
                     label = "Buy a cheap ticket",
-                    successDescription = "You win a small prize.",
-                    failDescription = "No winning number, you still lose some cash.",
+                    successDescription = "Small prize.",
+                    failDescription = "No win, small loss.",
                     successCoinDelta = +10000,
                     failCoinDelta = -5000,
                     successRatePercent = 40
@@ -353,20 +313,18 @@ class GameActivity : AppCompatActivity() {
             title = "Part-time Job",
             description = "You see a sign looking for part-time helpers.",
             choices = listOf(
-                // 加班：期望略正，但有可能掉很多
                 EventChoice(
                     label = "Work overtime",
-                    successDescription = "You work hard and get a big bonus.",
-                    failDescription = "You get exhausted and make mistakes. Pay is heavily deducted.",
+                    successDescription = "Big bonus!",
+                    failDescription = "You mess up and get fined.",
                     successCoinDelta = +25000,
                     failCoinDelta = -20000,
                     successRatePercent = 55
                 ),
-                // 摸鱼班：小正面，几乎无风险
                 EventChoice(
                     label = "Work casually",
-                    successDescription = "Easy shift, you still get some money.",
-                    failDescription = "Business is slow, no pay at all.",
+                    successDescription = "Easy pay.",
+                    failDescription = "No pay today.",
                     successCoinDelta = +9000,
                     failCoinDelta = 0,
                     successRatePercent = 80
@@ -376,22 +334,20 @@ class GameActivity : AppCompatActivity() {
 
         val shopEvent = TileEventTemplate(
             title = "Shopping Temptation",
-            description = "You walk by a shop with a big SALE sign.",
+            description = "A shop is having a big SALE.",
             choices = listOf(
-                // 冲动消费：大亏风险 + 中等奖励
                 EventChoice(
                     label = "Buy a fancy item",
-                    successDescription = "It turns out to be valuable, you resell it later.",
-                    failDescription = "Impulse purchase. It wasn't worth the price at all.",
+                    successDescription = "You resell it for profit.",
+                    failDescription = "Terrible buy. Big loss.",
                     successCoinDelta = +25000,
                     failCoinDelta = -50000,
                     successRatePercent = 35
                 ),
-                // 围观：小赚 or 持平
                 EventChoice(
                     label = "Just browse",
                     successDescription = "You find a small bargain.",
-                    failDescription = "Nothing interesting, but you keep all your money.",
+                    failDescription = "Nothing interesting.",
                     successCoinDelta = +6000,
                     failCoinDelta = 0,
                     successRatePercent = 70
@@ -406,7 +362,8 @@ class GameActivity : AppCompatActivity() {
         }
     }
 
-    /** 随机分配产业格位置（新局时调用） */
+    // ---------------- PROPERTIES ----------------
+
     private fun randomizePropertyPositions() {
         propertyIdToTile.clear()
         tileToPropertyId.clear()
@@ -414,10 +371,10 @@ class GameActivity : AppCompatActivity() {
         val availableTiles = (0 until TOTAL_TILES).toMutableList()
         allProperties.forEach { property ->
             if (availableTiles.isEmpty()) return@forEach
-            val index = availableTiles.random()
-            availableTiles.remove(index)
-            propertyIdToTile[property.id] = index
-            tileToPropertyId[index] = property.id
+            val idx = availableTiles.random()
+            availableTiles.remove(idx)
+            propertyIdToTile[property.id] = idx
+            tileToPropertyId[idx] = property.id
         }
 
         updateTileIcons()
@@ -431,16 +388,13 @@ class GameActivity : AppCompatActivity() {
         return getPropertyInfoById(id)
     }
 
-    /** 根据当前的产业位置，为每个格子设置对应图标（产业/随机） */
     private fun updateTileIcons() {
         if (tileIconViews.size != TOTAL_TILES) return
-
         for (i in 0 until TOTAL_TILES) {
             val iconView = tileIconViews[i]
             val propertyId = tileToPropertyId[i]
             if (propertyId != null) {
-                val resId = propertyIdToIconRes[propertyId] ?: randomTileIconRes
-                iconView.setImageResource(resId)
+                iconView.setImageResource(propertyIdToIconRes[propertyId] ?: randomTileIconRes)
             } else {
                 iconView.setImageResource(randomTileIconRes)
             }
@@ -449,16 +403,12 @@ class GameActivity : AppCompatActivity() {
 
     // ---------------- TILE CLICK INFO ----------------
 
-    /** 点击格子，弹出该格子的详细信息（只有在没有事件/动画时才响应） */
     private fun onTileClicked(tileIndex: Int) {
-        // 如果当前在动画/事件流程中（Roll Dice 按钮禁用），就不处理
-        if (!btnRollDice.isEnabled) {
-            return
-        }
+        // only allow when not in rolling/animating
+        if (!btnRollDice.isEnabled) return
 
         val propertyId = tileToPropertyId[tileIndex]
         if (propertyId != null) {
-            // 产业格信息
             val info = getPropertyInfoById(propertyId) ?: return
             val owned = playerState.ownedProperties.contains(propertyId)
 
@@ -478,7 +428,6 @@ class GameActivity : AppCompatActivity() {
                 .setPositiveButton("OK", null)
                 .show()
         } else {
-            // 随机事件格信息
             val template = tileEvents[tileIndex]
             val msg = if (template != null && template.choices.size >= 2) {
                 val c1 = template.choices[0]
@@ -500,7 +449,7 @@ class GameActivity : AppCompatActivity() {
                     append("  On fail: ${c2.failCoinDelta} coins\n")
                 }
             } else {
-                "Tile index: $tileIndex\nType: Random event tile\n\n(No detailed event template found.)"
+                "Tile index: $tileIndex\nType: Random event tile\n\n(No template found.)"
             }
 
             AlertDialog.Builder(this)
@@ -535,8 +484,6 @@ class GameActivity : AppCompatActivity() {
         }
     }
 
-    // ----- Property event -----
-
     private fun showPropertyDialog(
         newPosition: Int,
         dice: Int,
@@ -546,14 +493,7 @@ class GameActivity : AppCompatActivity() {
         val alreadyOwned = playerState.ownedProperties.contains(propertyId)
 
         if (alreadyOwned) {
-            val desc = "You visited your property: ${info.name}."
-            endTurn(
-                newPosition = newPosition,
-                dice = dice,
-                baseCoinDelta = 0,
-                description = desc,
-                overrideOwnedProperties = null
-            )
+            endTurn(newPosition, dice, 0, "You visited your property: ${info.name}.", null)
             return
         }
 
@@ -571,74 +511,61 @@ class GameActivity : AppCompatActivity() {
             .setCancelable(true)
             .setPositiveButton("Buy") { _, _ ->
                 if (playerState.coins < info.price) {
-                    Toast.makeText(
-                        this,
-                        "Not enough coins to buy this property.",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    val desc = "You wanted to buy ${info.name}, but didn't have enough coins."
-                    endTurn(newPosition, dice, 0, desc, null)
+                    Toast.makeText(this, "Not enough coins.", Toast.LENGTH_SHORT).show()
+                    endTurn(newPosition, dice, 0, "You couldn't afford ${info.name}.", null)
                 } else {
                     val newList = playerState.ownedProperties.toMutableList()
-                    if (!newList.contains(propertyId)) newList.add(propertyId)
-                    val desc = "You bought property: ${info.name} for ${info.price} coins."
-                    endTurn(newPosition, dice, -info.price, desc, newList)
+                    newList.add(propertyId)
+                    endTurn(newPosition, dice, -info.price,
+                        "You bought ${info.name} for ${info.price} coins.", newList)
                 }
             }
             .setNegativeButton("Skip") { _, _ ->
-                val desc = "You decided not to buy ${info.name}."
-                endTurn(newPosition, dice, 0, desc, null)
+                endTurn(newPosition, dice, 0, "You skipped ${info.name}.", null)
             }
             .setOnCancelListener {
-                val desc = "You hesitated and walked away from ${info.name}."
-                endTurn(newPosition, dice, 0, desc, null)
+                endTurn(newPosition, dice, 0, "You walked away from ${info.name}.", null)
             }
             .show()
     }
 
-    // ----- Normal event -----
-
     private fun showEventDialog(newPosition: Int, dice: Int, template: TileEventTemplate?) {
         if (template == null || template.choices.size < 2) {
-            val result = ResolvedEvent("Nothing happens on this tile.", 0)
-            applyEventChoice(newPosition, dice, result)
+            applyEventChoice(newPosition, dice, ResolvedEvent("Nothing happens.", 0))
             return
         }
 
-        val choice1 = template.choices[0]
-        val choice2 = template.choices[1]
+        val c1 = template.choices[0]
+        val c2 = template.choices[1]
 
         val message = buildString {
             append("You landed on tile $newPosition.\n\n")
             append(template.description)
             append("\n\n")
 
-            append("Option 1: ${choice1.label}\n")
-            append("Success rate: ${choice1.successRatePercent}%\n")
-            append("On success: ${choice1.successCoinDelta} coins\n")
-            append("On fail: ${choice1.failCoinDelta} coins\n\n")
+            append("Option 1: ${c1.label}\n")
+            append("Success rate: ${c1.successRatePercent}%\n")
+            append("On success: ${c1.successCoinDelta}\n")
+            append("On fail: ${c1.failCoinDelta}\n\n")
 
-            append("Option 2: ${choice2.label}\n")
-            append("Success rate: ${choice2.successRatePercent}%\n")
-            append("On success: ${choice2.successCoinDelta} coins\n")
-            append("On fail: ${choice2.failCoinDelta} coins")
+            append("Option 2: ${c2.label}\n")
+            append("Success rate: ${c2.successRatePercent}%\n")
+            append("On success: ${c2.successCoinDelta}\n")
+            append("On fail: ${c2.failCoinDelta}\n")
         }
 
         AlertDialog.Builder(this)
             .setTitle(template.title)
             .setMessage(message)
             .setCancelable(true)
-            .setPositiveButton(choice1.label) { _, _ ->
-                val result = resolveChoice(choice1, template.title)
-                applyEventChoice(newPosition, dice, result)
+            .setPositiveButton(c1.label) { _, _ ->
+                applyEventChoice(newPosition, dice, resolveChoice(c1, template.title))
             }
-            .setNegativeButton(choice2.label) { _, _ ->
-                val result = resolveChoice(choice2, template.title)
-                applyEventChoice(newPosition, dice, result)
+            .setNegativeButton(c2.label) { _, _ ->
+                applyEventChoice(newPosition, dice, resolveChoice(c2, template.title))
             }
             .setOnCancelListener {
-                val result = resolveChoice(choice2, template.title)
-                applyEventChoice(newPosition, dice, result)
+                applyEventChoice(newPosition, dice, resolveChoice(c2, template.title))
             }
             .show()
     }
@@ -647,33 +574,17 @@ class GameActivity : AppCompatActivity() {
         val roll = Random.nextInt(0, 100)
         val success = roll < choice.successRatePercent
         return if (success) {
-            ResolvedEvent(
-                description = "$title - ${choice.label}: SUCCESS! ${choice.successDescription}",
-                coinDelta = choice.successCoinDelta
-            )
+            ResolvedEvent("$title - ${choice.label}: SUCCESS! ${choice.successDescription}",
+                choice.successCoinDelta)
         } else {
-            ResolvedEvent(
-                description = "$title - ${choice.label}: FAILED. ${choice.failDescription}",
-                coinDelta = choice.failCoinDelta
-            )
+            ResolvedEvent("$title - ${choice.label}: FAILED. ${choice.failDescription}",
+                choice.failCoinDelta)
         }
     }
 
-    private fun applyEventChoice(
-        newPosition: Int,
-        dice: Int,
-        result: ResolvedEvent
-    ) {
-        endTurn(
-            newPosition = newPosition,
-            dice = dice,
-            baseCoinDelta = result.coinDelta,
-            description = result.description,
-            overrideOwnedProperties = null
-        )
+    private fun applyEventChoice(newPosition: Int, dice: Int, result: ResolvedEvent) {
+        endTurn(newPosition, dice, result.coinDelta, result.description, null)
     }
-
-    // ----- Turn end + bankruptcy check -----
 
     private fun endTurn(
         newPosition: Int,
@@ -690,12 +601,9 @@ class GameActivity : AppCompatActivity() {
 
         val finalDesc = buildString {
             append(description)
-            if (propertyIncome != 0) {
-                append(" Property income this turn: $propertyIncome.")
-            }
+            if (propertyIncome != 0) append(" Property income: $propertyIncome.")
         }
 
-        // Bankruptcy check BEFORE we clamp coins
         if (newCoinsRaw < 0) {
             handleGameOver(newPosition, dice, finalDesc, totalDelta, newCoinsRaw)
             return
@@ -715,14 +623,12 @@ class GameActivity : AppCompatActivity() {
 
     private fun calculatePropertyIncome(ownedIds: List<String>): Int {
         var total = 0
-        for (id in ownedIds) {
-            val info = getPropertyInfoById(id)
-            if (info != null) total += info.incomePerTurn
+        ownedIds.forEach { id ->
+            getPropertyInfoById(id)?.let { total += it.incomePerTurn }
         }
         return total
     }
 
-    /** When coins would go < 0, end current game and start a new one */
     private fun handleGameOver(
         newPosition: Int,
         dice: Int,
@@ -730,50 +636,44 @@ class GameActivity : AppCompatActivity() {
         totalDelta: Int,
         newCoinsRaw: Int
     ) {
-        val message = buildString {
-            append("Rolled: $dice, moved to tile $newPosition.\n\n")
-            append(description)
-            append("\n\n")
-            append("Coin change this turn: $totalDelta\n")
-            append("Your coins would become: $newCoinsRaw (< 0).\n\n")
-            append("Game over! You are bankrupt.\n")
-            append("A new game will start.")
-        }
+        val message = """
+            Rolled: $dice, moved to tile $newPosition.
+
+            $description
+
+            Coin change this turn: $totalDelta
+            Your coins would become: $newCoinsRaw (< 0).
+
+            Game over! You are bankrupt.
+            A new game will start.
+        """.trimIndent()
 
         AlertDialog.Builder(this)
             .setTitle("Game Over")
             .setMessage(message)
             .setCancelable(false)
-            .setPositiveButton("Start New Game") { dialog, _ ->
-                dialog.dismiss()
+            .setPositiveButton("Start New Game") { d, _ ->
+                d.dismiss()
                 startNewGame()
             }
             .show()
     }
 
-    /** Normal turn result dialog (no bankruptcy) */
-    private fun showTurnResultDialog(
-        newPosition: Int,
-        dice: Int,
-        event: ResolvedEvent
-    ) {
-        val message = buildString {
-            append("Rolled: $dice, moved to tile $newPosition.\n\n")
-            append(event.description)
-            append("\n\n")
-            append("Coin change this turn: ${event.coinDelta}\n")
-            append("Total coins: ${playerState.coins}")
-        }
+    private fun showTurnResultDialog(newPosition: Int, dice: Int, event: ResolvedEvent) {
+        val message = """
+            Rolled: $dice, moved to tile $newPosition.
+
+            ${event.description}
+
+            Coin change this turn: ${event.coinDelta}
+            Total coins: ${playerState.coins}
+        """.trimIndent()
 
         AlertDialog.Builder(this)
             .setTitle("Turn Result")
             .setMessage(message)
-            .setPositiveButton("OK") { dialog, _ ->
-                dialog.dismiss()
-            }
-            .setOnDismissListener {
-                btnRollDice.isEnabled = true
-            }
+            .setPositiveButton("OK") { d, _ -> d.dismiss() }
+            .setOnDismissListener { btnRollDice.isEnabled = true }
             .show()
     }
 
@@ -818,7 +718,7 @@ class GameActivity : AppCompatActivity() {
     private fun updateUI() {
         tvCoins.text = "Coins: ${playerState.coins}"
         tvDiceLeft.text = "Dice left: ${playerState.diceLeft}"
-        tvEvent.text = "" // no log at bottom
+        tvEvent.text = ""
         updateBoardHighlight()
         updateTileIcons()
     }
@@ -833,12 +733,11 @@ class GameActivity : AppCompatActivity() {
         }
     }
 
-    /** Start a completely NEW GAME: reset player & randomize properties */
     private fun startNewGame() {
         initTileEvents()
         randomizePropertyPositions()
         playerState = PlayerState(
-            coins = 100000,       // 和 PlayerState 默认保持一致
+            coins = 100000,
             position = 0,
             diceLeft = 20,
             ownedProperties = emptyList()
@@ -877,7 +776,6 @@ class GameActivity : AppCompatActivity() {
                         }
                         updateTileIcons()
                     } else {
-                        // No property info stored -> treat as new game
                         startNewGame()
                         return@addOnSuccessListener
                     }
@@ -885,7 +783,6 @@ class GameActivity : AppCompatActivity() {
                     playerState = PlayerState(coins, position, diceLeft, ownedProps)
                     updateUI()
                 } else {
-                    // No save yet -> new game
                     startNewGame()
                 }
             }
