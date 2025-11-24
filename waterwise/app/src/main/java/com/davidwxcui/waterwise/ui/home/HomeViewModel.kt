@@ -1,33 +1,37 @@
 package com.davidwxcui.waterwise.ui.home
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.davidwxcui.waterwise.data.CsvDrinkStorage
+import androidx.lifecycle.viewModelScope
 import com.davidwxcui.waterwise.data.DrinkLog
 import com.davidwxcui.waterwise.data.DrinkType
+import com.davidwxcui.waterwise.data.FirestoreDrinkStorage
+import com.davidwxcui.waterwise.ui.profile.FirebaseAuthRepository
 import com.davidwxcui.waterwise.ui.profile.HydrationFormula
+import com.davidwxcui.waterwise.ui.profile.Profile
 import com.davidwxcui.waterwise.ui.profile.ProfilePrefs
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
+import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
-    // 本地 CSV 存储：/data/data/com.davidwxcui.waterwise/files/drinkLog.csv
-    private val storage = CsvDrinkStorage(getApplication())
+    private val storage = FirestoreDrinkStorage()
+    private val db = FirebaseFirestore.getInstance()
 
-    // Load profile to get accurate daily goal
-    private val profile = ProfilePrefs.load(application)
-    private val dailyGoalMl = HydrationFormula.dailyGoalMl(
-        profile.weightKg.toFloat(),
-        profile.sex,
-        profile.age,
-        profile.activity
-    )
-    private val limitCoeff = 60  // ml/kg upper limit
+    private val uid: String?
+        get() = FirebaseAuthRepository.currentUid()
 
-    // 各饮品折算系数
+    // Load profile
+    private var currentProfile: Profile = ProfilePrefs.load(application)
+
+    private val limitCoeff = 60
+
     private val factor = mapOf(
         DrinkType.Water to 1.0,
         DrinkType.Tea to 0.9,
@@ -40,7 +44,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         DrinkType.Sparkling to 1.0
     )
 
-    // 默认份量（全部 50 的倍数）
     private val defaultPortions = mapOf(
         DrinkType.Water to listOf(200, 250, 500),
         DrinkType.Tea to listOf(200, 300),
@@ -72,19 +75,31 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val todayTip: String
     )
 
+    private val _activeRoomId = MutableLiveData<String?>(null)
+    val activeRoomId: LiveData<String?> = _activeRoomId
+
+    private fun computeDailyGoalMl(): Int {
+        return HydrationFormula.dailyGoalMl(
+            currentProfile.weightKg.toFloat(),
+            currentProfile.sex,
+            currentProfile.age,
+            currentProfile.activity
+        )
+    }
+
+    private fun computeLimitMl(): Int {
+        return currentProfile.weightKg * limitCoeff
+    }
+
     private val _uiState = MutableLiveData(
         UIState(
             intakeMl = 0,
             effectiveMl = 0,
-            goalMl = dailyGoalMl,
-            limitMl = profile.weightKg * limitCoeff,
+            goalMl = computeDailyGoalMl(),
+            limitMl = computeLimitMl(),
             overLimit = false,
             caffeineRatio = 0.0,
-            importantEvent = ImportantEvent(
-                "10K Run",
-                3,
-                "Tip: +300 ml water today"
-            )
+            importantEvent = ImportantEvent("10K Run", 3, "Tip: +300 ml water today")
         )
     )
     val uiState: LiveData<UIState> = _uiState
@@ -99,44 +114,130 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val summary: LiveData<Summary> = _summary
 
     private var idSeed = 1
-    private val lastByType: MutableMap<DrinkType, Int> = mutableMapOf()
+    private val lastByType = mutableMapOf<DrinkType, Int>()
+
+    private var drinkReg: ListenerRegistration? = null
+    private var profileReg: ListenerRegistration? = null
 
     init {
-        // 启动时从 CSV 读所有记录
-        val loaded = storage.loadAll()
-            .sortedByDescending { it.timeMillis }
-            .mapIndexed { index, log ->
-                log.copy(id = index + 1)
-            }
+        startListenDrinkLogs()
+        startListenProfile()
+        refreshDrinkLogsOnce()
+    }
 
-        _timeline.value = loaded
-        idSeed = (loaded.maxOfOrNull { it.id } ?: 0) + 1
+    fun refreshListeners() {
+        startListenDrinkLogs()
+        startListenProfile()
+        refreshDrinkLogsOnce()
+    }
 
-        // 恢复“和上次一样”的缓存
-        loaded.forEach { log ->
-            lastByType[log.type] = log.volumeMl
+    private fun startListenDrinkLogs() {
+        val realUid = uid ?: run {
+            Log.w("HomeViewModel", "startListenDrinkLogs skipped: uid=null")
+            return
         }
 
-        recompute(loaded)
+        drinkReg?.remove()
+        drinkReg = storage.listenDrinkLogs(
+            uid = realUid,
+            onUpdate = { list ->
+                val ordered = list.sortedByDescending { it.timeMillis }
+                _timeline.postValue(ordered)
+
+                idSeed = (ordered.maxOfOrNull { it.id } ?: 0) + 1
+                ordered.forEach { lastByType[it.type] = it.volumeMl }
+
+                recompute(ordered)
+            },
+            onError = { e ->
+                Log.e("HomeViewModel", "listenDrinkLogs error", e)
+            }
+        )
+    }
+
+    private fun refreshDrinkLogsOnce() {
+        val realUid = uid ?: return
+        viewModelScope.launch {
+            try {
+                val list = storage.fetchDrinkLogsOnce(realUid)
+                val ordered = list.sortedByDescending { it.timeMillis }
+                _timeline.postValue(ordered)
+
+                idSeed = (ordered.maxOfOrNull { it.id } ?: 0) + 1
+                ordered.forEach { lastByType[it.type] = it.volumeMl }
+
+                recompute(ordered)
+            } catch (e: Exception) {
+                Log.e("HomeViewModel", "refreshDrinkLogsOnce failed", e)
+            }
+        }
+    }
+
+    private fun startListenProfile() {
+        val realUid = uid ?: run {
+            Log.w("HomeViewModel", "startListenProfile skipped: uid=null")
+            return
+        }
+
+        profileReg?.remove()
+        profileReg = db.collection("users").document(realUid)
+            .addSnapshotListener { snap, err ->
+                if (err != null || snap == null || !snap.exists()) return@addSnapshotListener
+                val ar = snap.getString("activeRoomId")
+                val r = snap.getString("roomId")
+                _activeRoomId.postValue(ar ?: r)
+
+                // refresh Profile
+                val sexStr = snap.getString("sex")
+                val actStr = snap.getString("activityLevel")
+
+                val newProfile = currentProfile.copy(
+                    name = snap.getString("name") ?: currentProfile.name,
+                    email = snap.getString("email") ?: currentProfile.email,
+                    age = (snap.getLong("age") ?: currentProfile.age.toLong()).toInt(),
+                    heightCm = (snap.getLong("heightCm") ?: currentProfile.heightCm.toLong()).toInt(),
+                    weightKg = (snap.getLong("weightKg") ?: currentProfile.weightKg.toLong()).toInt(),
+                    activityFreqLabel = snap.getString("activityFreqLabel") ?: currentProfile.activityFreqLabel,
+                    avatarUri = snap.getString("avatarUri") ?: currentProfile.avatarUri,
+                    sex = try {
+                        if (sexStr != null) currentProfile.sex::class.java.enumConstants
+                            ?.firstOrNull { it.name == sexStr } ?: currentProfile.sex
+                        else currentProfile.sex
+                    } catch (_: Exception) { currentProfile.sex },
+                    activity = try {
+                        if (actStr != null) currentProfile.activity::class.java.enumConstants
+                            ?.firstOrNull { it.name == actStr } ?: currentProfile.activity
+                        else currentProfile.activity
+                    } catch (_: Exception) { currentProfile.activity }
+                )
+
+                // Update local profile cache
+                currentProfile = newProfile
+                ProfilePrefs.save(getApplication(), newProfile)
+                recompute(_timeline.value ?: emptyList())
+            }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        drinkReg?.remove()
+        profileReg?.remove()
     }
 
     fun defaultPortionsFor(t: DrinkType): List<Int> =
         defaultPortions[t] ?: listOf(200, 250, 500)
 
     fun addSameAsLast(type: DrinkType) {
-        val v = lastByType[type]
-        if (v != null) {
-            addDrink(type, v)
-        } else {
-            val mid = defaultPortionsFor(type).getOrNull(1) ?: 200
-            addDrink(type, mid)
-        }
+        val v = lastByType[type] ?: defaultPortionsFor(type).getOrNull(1) ?: 200
+        addDrink(type, v)
     }
 
     fun addDrink(type: DrinkType, volumeMl: Int) {
+        val realUid = uid ?: return
         val rounded = max(50, (volumeMl / 50) * 50)
         val eff = (rounded * (factor[type] ?: 1.0)).toInt()
-        val new = DrinkLog(
+
+        val log = DrinkLog(
             id = idSeed++,
             type = type,
             volumeMl = rounded,
@@ -144,65 +245,51 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             note = null,
             timeMillis = System.currentTimeMillis()
         )
+
         lastByType[type] = rounded
-
-        val list = listOf(new) + (_timeline.value ?: emptyList())
-        val finalList = list.sortedByDescending { it.timeMillis }
-
-        _timeline.value = finalList
-        recompute(finalList)
-        storage.saveAll(finalList)
+        storage.addDrinkLog(realUid, log) {
+            refreshDrinkLogsOnce()
+        }
     }
 
     fun deleteDrink(id: Int) {
-        val list = _timeline.value ?: emptyList()
-        val finalList = list.filterNot { it.id == id }
-        _timeline.value = finalList
-        recompute(finalList)
-        storage.saveAll(finalList)
+        val realUid = uid ?: return
+        val list = _timeline.value ?: return
+        val target = list.find { it.id == id } ?: return
+
+        storage.deleteDrinkLog(realUid, target) {
+            refreshDrinkLogsOnce()
+        }
     }
 
-    /**
-     * 原来你是直接 +50ml 的，这里先保留，给时间线以外的地方用。
-     * 真正的弹窗编辑用下面的 updateDrinkVolume。
-     */
     fun editDrink(item: DrinkLog) {
         updateDrinkVolume(item.id, item.volumeMl + 50)
     }
 
-    /**
-     * ✅ 按指定 ml 更新一条记录，弹窗要用这个
-     */
     fun updateDrinkVolume(id: Int, newVolumeMl: Int) {
-        val current = _timeline.value.orEmpty().toMutableList()
-        val idx = current.indexOfFirst { it.id == id }
-        if (idx == -1) return
+        val realUid = uid ?: return
+        val list = _timeline.value ?: return
+        val target = list.find { it.id == id } ?: return
 
-        val old = current[idx]
         val rounded = max(50, (newVolumeMl / 50) * 50)
-        val eff = (rounded * (factor[old.type] ?: 1.0)).toInt()
-        val updated = old.copy(
+        val eff = (rounded * (factor[target.type] ?: 1.0)).toInt()
+
+        val updated = target.copy(
             volumeMl = rounded,
             effectiveMl = eff
         )
-        current[idx] = updated
 
-        val finalList = current.sortedByDescending { it.timeMillis }
-        _timeline.value = finalList
-
-        // 更新“和上次一样”
-        lastByType[old.type] = rounded
-
-        recompute(finalList)
-        storage.saveAll(finalList)
+        lastByType[target.type] = rounded
+        storage.updateDrinkLog(realUid, updated) {
+            refreshDrinkLogsOnce()
+        }
     }
 
     private fun recompute(list: List<DrinkLog>) {
         val intake = list.sumOf { it.volumeMl }
         val effective = list.sumOf { it.effectiveMl }
-        val goal = dailyGoalMl
-        val limit = profile.weightKg * limitCoeff
-        val over = intake > limit
+        val goal = computeDailyGoalMl()
+        val limit = computeLimitMl()
 
         val totalEff = max(1, effective)
         val caffeineEff = list
@@ -215,21 +302,26 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                         it.type == DrinkType.Yogurt
             }
             .sumOf { it.effectiveMl }.toDouble() / totalEff
+
         val waterEff = min(1.0, 1.0 - caffeineEff - sugaryEff)
 
-        _uiState.value = _uiState.value?.copy(
-            intakeMl = intake,
-            effectiveMl = effective,
-            goalMl = goal,
-            limitMl = limit,
-            overLimit = over,
-            caffeineRatio = caffeineEff
+        _uiState.postValue(
+            _uiState.value?.copy(
+                intakeMl = intake,
+                effectiveMl = effective,
+                goalMl = goal,
+                limitMl = limit,
+                overLimit = intake > limit,
+                caffeineRatio = caffeineEff
+            )
         )
 
-        _summary.value = Summary(
-            waterRatio = waterEff.coerceIn(0.0, 1.0),
-            caffeineRatio = caffeineEff.coerceIn(0.0, 1.0),
-            sugaryRatio = sugaryEff.coerceIn(0.0, 1.0)
+        _summary.postValue(
+            Summary(
+                waterRatio = waterEff.coerceIn(0.0, 1.0),
+                caffeineRatio = caffeineEff.coerceIn(0.0, 1.0),
+                sugaryRatio = sugaryEff.coerceIn(0.0, 1.0)
+            )
         )
     }
 
