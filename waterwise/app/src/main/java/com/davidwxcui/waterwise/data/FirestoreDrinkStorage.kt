@@ -1,8 +1,11 @@
 package com.davidwxcui.waterwise.data
 
 import android.util.Log
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.Query
+import kotlinx.coroutines.tasks.await
 
 class FirestoreDrinkStorage {
 
@@ -14,6 +17,46 @@ class FirestoreDrinkStorage {
     private fun drinkLogsCol(uid: String) =
         userDoc(uid).collection("drinkLogs")
 
+    private fun getLongSafe(v: Any?): Long {
+        return when (v) {
+            is Number -> v.toLong()
+            is Timestamp -> v.toDate().time
+            is String -> v.toLongOrNull() ?: 0L
+            else -> 0L
+        }
+    }
+
+    suspend fun fetchDrinkLogsOnce(uid: String): List<DrinkLog> {
+        val snap = drinkLogsCol(uid)
+            .orderBy("timeMillis", Query.Direction.DESCENDING)
+            .get().await()
+
+        return snap.documents.mapNotNull { doc ->
+            try {
+                val typeStrRaw = doc.getString("type") ?: return@mapNotNull null
+                val type = DrinkType.fromFirestore(typeStrRaw)
+
+                val id = getLongSafe(doc.get("id")).toInt()
+                val volumeMl = getLongSafe(doc.get("volumeMl") ?: doc.get("volumeML")).toInt()
+                val effectiveMl = getLongSafe(doc.get("effectiveMl") ?: doc.get("effectiveML")).toInt()
+                val note = doc.getString("note")
+                val timeMillis = getLongSafe(doc.get("timeMillis"))
+
+                DrinkLog(
+                    id = id,
+                    type = type,
+                    volumeMl = volumeMl,
+                    effectiveMl = effectiveMl,
+                    note = note,
+                    timeMillis = timeMillis
+                )
+            } catch (e: Exception) {
+                Log.e("FirestoreDrinkStorage", "fetch parse error: ${e.message}")
+                null
+            }
+        }
+    }
+
     /**
      * List DrinkLogs（by timeMillis decreasing）
      */
@@ -23,7 +66,7 @@ class FirestoreDrinkStorage {
         onError: (Exception) -> Unit = {}
     ): ListenerRegistration {
         return drinkLogsCol(uid)
-            .orderBy("timeMillis", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .orderBy("timeMillis", Query.Direction.DESCENDING)
             .addSnapshotListener { snap, err ->
                 if (err != null) {
                     onError(err)
@@ -36,13 +79,14 @@ class FirestoreDrinkStorage {
 
                 val list = snap.documents.mapNotNull { doc ->
                     try {
-                        val typeStr = doc.getString("type") ?: return@mapNotNull null
-                        val type = DrinkType.valueOf(typeStr)
-                        val id = (doc.getLong("id") ?: 0L).toInt()
-                        val volumeMl = (doc.getLong("volumeMl") ?: 0L).toInt()
-                        val effectiveMl = (doc.getLong("effectiveMl") ?: 0L).toInt()
+                        val typeStrRaw = doc.getString("type") ?: return@mapNotNull null
+                        val type = DrinkType.fromFirestore(typeStrRaw)
+
+                        val id = getLongSafe(doc.get("id")).toInt()
+                        val volumeMl = getLongSafe(doc.get("volumeMl") ?: doc.get("volumeML")).toInt()
+                        val effectiveMl = getLongSafe(doc.get("effectiveMl") ?: doc.get("effectiveML")).toInt()
                         val note = doc.getString("note")
-                        val timeMillis = doc.getLong("timeMillis") ?: 0L
+                        val timeMillis = getLongSafe(doc.get("timeMillis"))
 
                         DrinkLog(
                             id = id,
@@ -91,7 +135,7 @@ class FirestoreDrinkStorage {
     }
 
     /**
-     * update  volume
+     * update volume
      */
     fun updateDrinkLog(uid: String, log: DrinkLog, onDone: (() -> Unit)? = null) {
         val docId = "${uid}_${log.timeMillis}_${log.id}"

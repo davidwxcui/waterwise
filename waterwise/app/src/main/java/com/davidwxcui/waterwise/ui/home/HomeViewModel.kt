@@ -1,9 +1,11 @@
 package com.davidwxcui.waterwise.ui.home
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewModelScope
 import com.davidwxcui.waterwise.data.DrinkLog
 import com.davidwxcui.waterwise.data.DrinkType
 import com.davidwxcui.waterwise.data.FirestoreDrinkStorage
@@ -13,6 +15,7 @@ import com.davidwxcui.waterwise.ui.profile.Profile
 import com.davidwxcui.waterwise.ui.profile.ProfilePrefs
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
 
@@ -21,9 +24,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val storage = FirestoreDrinkStorage()
     private val db = FirebaseFirestore.getInstance()
 
-    /**
-     * uid from firebase Auth
-     */
     private val uid: String?
         get() = FirebaseAuthRepository.currentUid()
 
@@ -122,10 +122,20 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     init {
         startListenDrinkLogs()
         startListenProfile()
+        refreshDrinkLogsOnce()
+    }
+
+    fun refreshListeners() {
+        startListenDrinkLogs()
+        startListenProfile()
+        refreshDrinkLogsOnce()
     }
 
     private fun startListenDrinkLogs() {
-        val realUid = uid ?: return  // if not log in then do not write any thing
+        val realUid = uid ?: run {
+            Log.w("HomeViewModel", "startListenDrinkLogs skipped: uid=null")
+            return
+        }
 
         drinkReg?.remove()
         drinkReg = storage.listenDrinkLogs(
@@ -139,15 +149,35 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
                 recompute(ordered)
             },
-            onError = {
-                // keep silent for now
+            onError = { e ->
+                Log.e("HomeViewModel", "listenDrinkLogs error", e)
             }
         )
     }
 
+    private fun refreshDrinkLogsOnce() {
+        val realUid = uid ?: return
+        viewModelScope.launch {
+            try {
+                val list = storage.fetchDrinkLogsOnce(realUid)
+                val ordered = list.sortedByDescending { it.timeMillis }
+                _timeline.postValue(ordered)
+
+                idSeed = (ordered.maxOfOrNull { it.id } ?: 0) + 1
+                ordered.forEach { lastByType[it.type] = it.volumeMl }
+
+                recompute(ordered)
+            } catch (e: Exception) {
+                Log.e("HomeViewModel", "refreshDrinkLogsOnce failed", e)
+            }
+        }
+    }
 
     private fun startListenProfile() {
-        val realUid = uid ?: return
+        val realUid = uid ?: run {
+            Log.w("HomeViewModel", "startListenProfile skipped: uid=null")
+            return
+        }
 
         profileReg?.remove()
         profileReg = db.collection("users").document(realUid)
@@ -217,14 +247,19 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         )
 
         lastByType[type] = rounded
-        storage.addDrinkLog(realUid, log)
+        storage.addDrinkLog(realUid, log) {
+            refreshDrinkLogsOnce()
+        }
     }
 
     fun deleteDrink(id: Int) {
         val realUid = uid ?: return
         val list = _timeline.value ?: return
         val target = list.find { it.id == id } ?: return
-        storage.deleteDrinkLog(realUid, target)
+
+        storage.deleteDrinkLog(realUid, target) {
+            refreshDrinkLogsOnce()
+        }
     }
 
     fun editDrink(item: DrinkLog) {
@@ -245,7 +280,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         )
 
         lastByType[target.type] = rounded
-        storage.updateDrinkLog(realUid, updated)
+        storage.updateDrinkLog(realUid, updated) {
+            refreshDrinkLogsOnce()
+        }
     }
 
     private fun recompute(list: List<DrinkLog>) {
