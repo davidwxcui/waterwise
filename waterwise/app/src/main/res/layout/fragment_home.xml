@@ -58,7 +58,7 @@
                     android:id="@+id/btnGame"
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:src="@drawable/notifications_24dp"
+                    android:src="@drawable/ic_game_console"
                     android:contentDescription="Game"
                     android:background="@drawable/circle_background"
                     android:padding="5dp"
