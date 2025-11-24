@@ -83,7 +83,8 @@
         android:id="@+id/btnAddDice"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Add 1000 Dice"
+        android:text="Back"
         android:layout_marginTop="8dp" />
 
 </LinearLayout>
+
