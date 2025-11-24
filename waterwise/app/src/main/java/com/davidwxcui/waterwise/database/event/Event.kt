@@ -1,4 +1,4 @@
-package com.davidwxcui.waterwise.database
+package com.davidwxcui.waterwise.database.event
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 

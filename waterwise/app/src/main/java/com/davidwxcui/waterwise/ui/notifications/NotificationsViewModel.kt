@@ -4,9 +4,9 @@ package com.davidwxcui.waterwise.ui.notifications
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.davidwxcui.waterwise.database.EventDatabase
-import com.davidwxcui.waterwise.database.Event
-import com.davidwxcui.waterwise.database.EventRepository
+import com.davidwxcui.waterwise.database.event.EventDatabase
+import com.davidwxcui.waterwise.database.event.Event
+import com.davidwxcui.waterwise.database.event.EventRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
