@@ -9,7 +9,9 @@ import com.davidwxcui.waterwise.data.DrinkType
 import com.davidwxcui.waterwise.data.FirestoreDrinkStorage
 import com.davidwxcui.waterwise.ui.profile.FirebaseAuthRepository
 import com.davidwxcui.waterwise.ui.profile.HydrationFormula
+import com.davidwxcui.waterwise.ui.profile.Profile
 import com.davidwxcui.waterwise.ui.profile.ProfilePrefs
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import kotlin.math.max
 import kotlin.math.min
@@ -17,6 +19,7 @@ import kotlin.math.min
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val storage = FirestoreDrinkStorage()
+    private val db = FirebaseFirestore.getInstance()
 
     /**
      * uid from firebase Auth
@@ -25,13 +28,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         get() = FirebaseAuthRepository.currentUid()
 
     // Load profile
-    private val profile = ProfilePrefs.load(application)
-    private val dailyGoalMl = HydrationFormula.dailyGoalMl(
-        profile.weightKg.toFloat(),
-        profile.sex,
-        profile.age,
-        profile.activity
-    )
+    private var currentProfile: Profile = ProfilePrefs.load(application)
+
     private val limitCoeff = 60
 
     private val factor = mapOf(
@@ -77,12 +75,28 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val todayTip: String
     )
 
+    private val _activeRoomId = MutableLiveData<String?>(null)
+    val activeRoomId: LiveData<String?> = _activeRoomId
+
+    private fun computeDailyGoalMl(): Int {
+        return HydrationFormula.dailyGoalMl(
+            currentProfile.weightKg.toFloat(),
+            currentProfile.sex,
+            currentProfile.age,
+            currentProfile.activity
+        )
+    }
+
+    private fun computeLimitMl(): Int {
+        return currentProfile.weightKg * limitCoeff
+    }
+
     private val _uiState = MutableLiveData(
         UIState(
             intakeMl = 0,
             effectiveMl = 0,
-            goalMl = dailyGoalMl,
-            limitMl = profile.weightKg * limitCoeff,
+            goalMl = computeDailyGoalMl(),
+            limitMl = computeLimitMl(),
             overLimit = false,
             caffeineRatio = 0.0,
             importantEvent = ImportantEvent("10K Run", 3, "Tip: +300 ml water today")
@@ -102,17 +116,19 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private var idSeed = 1
     private val lastByType = mutableMapOf<DrinkType, Int>()
 
-    private var registration: ListenerRegistration? = null
+    private var drinkReg: ListenerRegistration? = null
+    private var profileReg: ListenerRegistration? = null
 
     init {
-        startListen()
+        startListenDrinkLogs()
+        startListenProfile()
     }
 
-    private fun startListen() {
+    private fun startListenDrinkLogs() {
         val realUid = uid ?: return  // if not log in then do not write any thing
 
-        registration?.remove()
-        registration = storage.listenDrinkLogs(
+        drinkReg?.remove()
+        drinkReg = storage.listenDrinkLogs(
             uid = realUid,
             onUpdate = { list ->
                 val ordered = list.sortedByDescending { it.timeMillis }
@@ -129,9 +145,53 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
+
+    private fun startListenProfile() {
+        val realUid = uid ?: return
+
+        profileReg?.remove()
+        profileReg = db.collection("users").document(realUid)
+            .addSnapshotListener { snap, err ->
+                if (err != null || snap == null || !snap.exists()) return@addSnapshotListener
+                val ar = snap.getString("activeRoomId")
+                val r = snap.getString("roomId")
+                _activeRoomId.postValue(ar ?: r)
+
+                // refresh Profile
+                val sexStr = snap.getString("sex")
+                val actStr = snap.getString("activityLevel")
+
+                val newProfile = currentProfile.copy(
+                    name = snap.getString("name") ?: currentProfile.name,
+                    email = snap.getString("email") ?: currentProfile.email,
+                    age = (snap.getLong("age") ?: currentProfile.age.toLong()).toInt(),
+                    heightCm = (snap.getLong("heightCm") ?: currentProfile.heightCm.toLong()).toInt(),
+                    weightKg = (snap.getLong("weightKg") ?: currentProfile.weightKg.toLong()).toInt(),
+                    activityFreqLabel = snap.getString("activityFreqLabel") ?: currentProfile.activityFreqLabel,
+                    avatarUri = snap.getString("avatarUri") ?: currentProfile.avatarUri,
+                    sex = try {
+                        if (sexStr != null) currentProfile.sex::class.java.enumConstants
+                            ?.firstOrNull { it.name == sexStr } ?: currentProfile.sex
+                        else currentProfile.sex
+                    } catch (_: Exception) { currentProfile.sex },
+                    activity = try {
+                        if (actStr != null) currentProfile.activity::class.java.enumConstants
+                            ?.firstOrNull { it.name == actStr } ?: currentProfile.activity
+                        else currentProfile.activity
+                    } catch (_: Exception) { currentProfile.activity }
+                )
+
+                // Update local profile cache
+                currentProfile = newProfile
+                ProfilePrefs.save(getApplication(), newProfile)
+                recompute(_timeline.value ?: emptyList())
+            }
+    }
+
     override fun onCleared() {
         super.onCleared()
-        registration?.remove()
+        drinkReg?.remove()
+        profileReg?.remove()
     }
 
     fun defaultPortionsFor(t: DrinkType): List<Int> =
@@ -191,8 +251,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private fun recompute(list: List<DrinkLog>) {
         val intake = list.sumOf { it.volumeMl }
         val effective = list.sumOf { it.effectiveMl }
-        val goal = dailyGoalMl
-        val limit = profile.weightKg * limitCoeff
+        val goal = computeDailyGoalMl()
+        val limit = computeLimitMl()
 
         val totalEff = max(1, effective)
         val caffeineEff = list

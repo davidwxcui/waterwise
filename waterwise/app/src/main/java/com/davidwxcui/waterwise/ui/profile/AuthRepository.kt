@@ -4,6 +4,7 @@ import android.content.Context
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import java.security.MessageDigest
 import java.util.UUID
 import java.util.UUID.randomUUID
@@ -100,7 +101,6 @@ object FirebaseAuthRepository : AuthApi {
     }
 
     // ---------- Firestore helpers ----------
-
     private suspend fun upsertUserProfile(uid: String, pf: Profile) {
         val data = hashMapOf(
             "uid" to uid,
@@ -112,15 +112,27 @@ object FirebaseAuthRepository : AuthApi {
             "weightKg" to pf.weightKg,
             "activityLevel" to pf.activity.name,
             "activityFreqLabel" to pf.activityFreqLabel,
-            "avatarUri" to pf.avatarUri,
-            "roomId" to null
+            "avatarUri" to pf.avatarUri
         )
 
         suspendCoroutine<Unit> { cont ->
             db.collection("users").document(uid)
-                .set(data)
+                .set(data, SetOptions.merge())
                 .addOnSuccessListener { cont.resume(Unit) }
                 .addOnFailureListener { e -> cont.resumeWithException(e) }
+        }
+    }
+
+    suspend fun fetchActiveRoomId(uid: String): String? {
+        return suspendCoroutine { cont ->
+            db.collection("users").document(uid)
+                .get()
+                .addOnSuccessListener { snap ->
+                    cont.resume(snap.getString("activeRoomId"))
+                }
+                .addOnFailureListener { e ->
+                    cont.resumeWithException(e)
+                }
         }
     }
 

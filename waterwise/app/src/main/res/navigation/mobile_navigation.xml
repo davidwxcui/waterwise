@@ -62,4 +62,5 @@
         android:name="com.davidwxcui.waterwise.ui.profile.EditProfileFragment"
         android:label="Edit Profile"
         tools:layout="@layout/fragment_edit_profile" />
+
 </navigation>
