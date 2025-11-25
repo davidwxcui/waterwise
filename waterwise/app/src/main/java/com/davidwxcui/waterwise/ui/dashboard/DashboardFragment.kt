@@ -11,16 +11,18 @@ import android.widget.TableRow
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.core.view.updatePadding
+import androidx.lifecycle.lifecycleScope
 import com.davidwxcui.waterwise.R
 import com.davidwxcui.waterwise.databinding.FragmentDashboardBinding
+import com.davidwxcui.waterwise.ui.profile.FirebaseAuthRepository
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import lecho.lib.hellocharts.model.*
 import lecho.lib.hellocharts.view.LineChartView
 import lecho.lib.hellocharts.view.ColumnChartView
-import java.io.BufferedReader
-import java.io.File
-import java.io.FileReader
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.roundToInt
@@ -43,6 +45,16 @@ class DashboardFragment : Fragment() {
     private val selectedTypes: MutableSet<String> = linkedSetOf()
     private var rangeStart: Long? = null
     private var rangeEnd: Long? = null
+
+    private val db = FirebaseFirestore.getInstance()
+
+    data class DrinkRow(
+        val timestamp: Long,
+        val type: String,
+        val volumeMl: Int,
+        val effectiveMl: Int,
+        val note: String
+    )
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -92,9 +104,9 @@ class DashboardFragment : Fragment() {
             "Juice" to 0xFFFB8C00.toInt(),
             "Soda" to 0xFFE53935.toInt(),
             "Milk" to 0xFF00897B.toInt(),
-            "Beer" to 0xFF6D4C41.toInt(),
-            "Wine" to 0xFFC2185B.toInt(),
-            "Other" to 0xFF546E7A.toInt()
+            "Yogurt" to 0xFF6D4C41.toInt(),
+            "Alcohol" to 0xFFC2185B.toInt(),
+            "Sparkling" to 0xFF546E7A.toInt()
         )
         preset[type]?.let { return it }
 
@@ -197,6 +209,7 @@ class DashboardFragment : Fragment() {
                 setCubic(false)
                 setHasPoints(true)
                 setHasLines(true)
+                pointRadius = 5
             }
         }
 
@@ -226,6 +239,49 @@ class DashboardFragment : Fragment() {
         lineChartView.maximumViewport = vp
         lineChartView.currentViewport = vp
         lineChartView.invalidate()
+
+        // Add touch listener for tooltips
+        setupChartTooltip(rows, times, indexByTs)
+    }
+
+    private fun setupChartTooltip(rows: List<DrinkRow>, times: List<Long>, indexByTs: Map<Long, Int>) {
+        lineChartView.setOnTouchListener { _, event ->
+            val x = event.x
+            val y = event.y
+
+            val viewport = lineChartView.currentViewport
+            val chart = lineChartView.chartComputator
+
+            // Convert touch coordinates to chart coordinates
+            val chartX = (x - chart.contentRectMinusAllMargins.left) / chart.contentRectMinusAllMargins.width() *
+                    (viewport.right - viewport.left) + viewport.left
+            val chartY = (chart.contentRectMinusAllMargins.bottom - y) / chart.contentRectMinusAllMargins.height() *
+                    (viewport.top - viewport.bottom) + viewport.bottom
+
+            // Find closest point within tolerance
+            val tolerance = 1.0f
+            var closestRow: DrinkRow? = null
+            var minDistance = Float.MAX_VALUE
+
+            rows.forEach { row ->
+                val ts = if (row.timestamp < 1_000_000_000_000L) row.timestamp * 1000 else row.timestamp
+                val pointX = indexByTs[ts]?.toFloat() ?: return@forEach
+                val pointY = row.volumeMl.toFloat()
+
+                val distance = kotlin.math.sqrt(((pointX - chartX) * (pointX - chartX) + (pointY - chartY) * (pointY - chartY)).toDouble()).toFloat()
+                if (distance < tolerance && distance < minDistance) {
+                    minDistance = distance
+                    closestRow = row
+                }
+            }
+
+            if (closestRow != null) {
+                val tooltip = "${closestRow!!.type} - ${closestRow!!.volumeMl}ml"
+                android.widget.Toast.makeText(requireContext(), tooltip, android.widget.Toast.LENGTH_SHORT).show()
+            }
+
+            false
+        }
     }
 
     /** 柱状图 */
@@ -282,15 +338,60 @@ class DashboardFragment : Fragment() {
 
     // ---------- Filtering / Data glue ----------
     private fun refreshData() {
-        allRows = readDrinkLog(File(requireContext().filesDir, "drinkLog.csv"))
-
-        val allTypes = allRows.map { it.type }.distinct().sorted()
-        if (selectedTypes.isEmpty()) selectedTypes += allTypes
-        else {
-            selectedTypes.retainAll(allTypes.toSet())
-            if (selectedTypes.isEmpty()) selectedTypes += allTypes
+        val uid = FirebaseAuthRepository.currentUid()
+        if (uid == null) {
+            allRows = emptyList()
+            binding.tvEmptyChart.visibility = View.VISIBLE
+            binding.lineChart.visibility = View.GONE
+            binding.columnChart.visibility = View.GONE
+            binding.tableHistory.removeAllViews()
+            return
         }
-        applyFiltersAndRender()
+
+        // Fetch from Firestore
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val snapshot = db.collection("users")
+                    .document(uid)
+                    .collection("drinkLogs")
+                    .get()
+                    .await()
+
+                allRows = snapshot.documents.mapNotNull { doc ->
+                    try {
+                        val type = doc.getString("type") ?: "Unknown"
+                        val volumeMl = (doc.getLong("volumeMl") ?: 0L).toInt()
+                        val effectiveMl = (doc.getLong("effectiveMl") ?: 0L).toInt()
+                        val timeMillis = doc.getLong("timeMillis") ?: 0L
+                        val note = doc.getString("note") ?: ""
+
+                        DrinkRow(
+                            timestamp = timeMillis,
+                            type = type,
+                            volumeMl = volumeMl,
+                            effectiveMl = effectiveMl,
+                            note = note
+                        )
+                    } catch (e: Exception) {
+                        android.util.Log.e("DashboardFragment", "Parse error: ${e.message}")
+                        null
+                    }
+                }
+
+                val allTypes = allRows.map { it.type }.distinct().sorted()
+                if (selectedTypes.isEmpty()) selectedTypes += allTypes
+                else {
+                    selectedTypes.retainAll(allTypes.toSet())
+                    if (selectedTypes.isEmpty()) selectedTypes += allTypes
+                }
+                applyFiltersAndRender()
+            } catch (e: Exception) {
+                android.util.Log.e("DashboardFragment", "Failed to fetch drink logs", e)
+                allRows = emptyList()
+                binding.tvEmptyChart.visibility = View.VISIBLE
+                binding.lineChart.visibility = View.GONE
+            }
+        }
     }
 
     private fun applyFiltersAndRender() {
@@ -359,53 +460,6 @@ class DashboardFragment : Fragment() {
         btn.text = "$s ~ $e"
     }
 
-    // ---------- CSV ----------
-    data class DrinkRow(
-        val timestamp: Long,
-        val type: String,
-        val volumeMl: Int,
-        val effectiveMl: Int,
-        val note: String
-    )
-
-    private fun readDrinkLog(file: File): List<DrinkRow> {
-        if (!file.exists()) return emptyList()
-        val out = mutableListOf<DrinkRow>()
-        BufferedReader(FileReader(file)).use { br ->
-            var line = br.readLine()
-            if (line != null && line.startsWith("timestamp")) line = br.readLine()
-            while (line != null) {
-                parseCsv(line)?.let { out += it }
-                line = br.readLine()
-            }
-        }
-        return out
-    }
-
-    private fun parseCsv(line: String): DrinkRow? {
-        val cells = mutableListOf<String>()
-        val sb = StringBuilder()
-        var inQuote = false
-        for (c in line) {
-            when {
-                c == '"' -> inQuote = !inQuote
-                c == ',' && !inQuote -> { cells += sb.toString().trim(); sb.clear() }
-                else -> sb.append(c)
-            }
-        }
-        cells += sb.toString().trim()
-
-        return try {
-            var ts = cells.getOrNull(0)?.toLong() ?: return null
-            if (ts < 1_000_000_000_000L) ts *= 1000
-            val type = cells.getOrNull(1)?.trim()?.trim('"') ?: "Unknown"
-            val vol  = cells.getOrNull(2)?.toIntOrNull() ?: 0
-            val eff  = cells.getOrNull(3)?.toIntOrNull() ?: 0
-            val note = cells.getOrNull(4)?.trim()?.trim('"') ?: ""
-            DrinkRow(ts, type, vol, eff, note)
-        } catch (_: Exception) { null }
-    }
-
     // ---------- History Table----------
     private fun updateHistoryTable(rows: List<DrinkRow>) {
         val table: TableLayout = binding.tableHistory
@@ -422,7 +476,7 @@ class DashboardFragment : Fragment() {
             return
         }
 
-        val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
         val padH = dp(12); val padV = dp(14)
 
         rows.sortedByDescending { it.timestamp }.forEach { r ->

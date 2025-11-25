@@ -233,7 +233,13 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addDrink(type: DrinkType, volumeMl: Int) {
-        val realUid = uid ?: return
+        val realUid = uid
+        if (realUid == null) {
+            Log.e("HomeViewModel", "User is not logged in! Cannot save drink.")
+            //Show a toast on screen so you know immediately
+            android.widget.Toast.makeText(getApplication(), "Please log in to start tracking", android.widget.Toast.LENGTH_SHORT).show()
+            return
+        }
         val rounded = max(50, (volumeMl / 50) * 50)
         val eff = (rounded * (factor[type] ?: 1.0)).toInt()
 
@@ -337,4 +343,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             else -> 200
         }
     }
+
+
 }

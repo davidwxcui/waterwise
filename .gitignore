@@ -11,3 +11,4 @@ waterwise/.idea/misc.xml
 /waterwise/daemon
 /waterwise/native
 /waterwise/wrapper
+local.properties

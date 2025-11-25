@@ -94,7 +94,7 @@ class NotificationsFragment : Fragment() {
                 selectedMonth + 1,
                 selectedDay
             )
-            viewModel.createEvent(eventTitle, selectedDate)
+            viewModel.createEventWithAI(eventTitle, selectedDate)
             Toast.makeText(
                 requireContext(),
                 "Event '$eventTitle' created for $selectedDate",
