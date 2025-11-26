@@ -1,90 +1,93 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/rootLayout"
-    android:orientation="vertical"
-    android:padding="16dp"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/gameRoot"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:clipToPadding="false"
+    android:paddingTop="16dp"
+    android:paddingBottom="16dp"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp">
 
-    <!-- Top status bar -->
     <LinearLayout
-        android:orientation="horizontal"
+        android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:weightSum="2">
+        android:layout_height="wrap_content">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:id="@+id/tvCoins"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Coins: 0"
+                android:textSize="18sp" />
+
+            <TextView
+                android:id="@+id/tvDiceLeft"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="end"
+                android:text="Dice left: 0"
+                android:textSize="18sp" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/boardContainer"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp">
+
+            <GridLayout
+                android:id="@+id/boardGrid"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:rowCount="8"
+                android:columnCount="5"
+                android:layout_gravity="center" />
+
+            <ImageView
+                android:id="@+id/diceImageView"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:layout_gravity="center"
+                android:src="@drawable/dice_1" />
+        </FrameLayout>
 
         <TextView
-            android:id="@+id/tvCoins"
-            android:layout_width="0dp"
+            android:id="@+id/tvEvent"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Coins: 1000"
-            android:textSize="18sp" />
+            android:textSize="14sp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp" />
 
-        <TextView
-            android:id="@+id/tvDiceLeft"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="end"
-            android:text="Dice left: 20"
-            android:textSize="18sp" />
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <Button
+                android:id="@+id/btnRollDice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Roll Dice"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp" />
+
+        </LinearLayout>
+
     </LinearLayout>
 
-    <!-- Board + centered dice -->
-    <FrameLayout
-        android:id="@+id/boardContainer"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="16dp">
-
-        <!-- 8x5 board (size decided in code) -->
-        <GridLayout
-            android:id="@+id/boardGrid"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:rowCount="8"
-            android:columnCount="5"
-            android:alignmentMode="alignMargins"
-            android:useDefaultMargins="true" />
-
-        <!-- Center dice -->
-        <ImageView
-            android:id="@+id/diceImageView"
-            android:layout_width="96dp"
-            android:layout_height="96dp"
-            android:layout_gravity="center"
-            android:scaleType="centerInside"
-            android:src="@drawable/dice_1" />
-    </FrameLayout>
-
-    <!-- Event text -->
-    <TextView
-        android:id="@+id/tvEvent"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Welcome to the mini Monopoly game!"
-        android:textSize="16sp"
-        android:layout_marginBottom="12dp" />
-
-    <!-- Roll button -->
-    <Button
-        android:id="@+id/btnRollDice"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Roll Dice" />
-
-    <!-- TEMP: add 1000 dice button -->
-    <Button
-        android:id="@+id/btnAddDice"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Back"
-        android:layout_marginTop="8dp" />
-
-</LinearLayout>
-
+</androidx.core.widget.NestedScrollView>

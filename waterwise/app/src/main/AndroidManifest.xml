@@ -28,6 +28,7 @@
         </activity>
 
         <activity android:name=".minigame.GameActivity" />
+        <activity android:name=".minigame.RoomMatchActivity" />
     </application>
 
 </manifest>

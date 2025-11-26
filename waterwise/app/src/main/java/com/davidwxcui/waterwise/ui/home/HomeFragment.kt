@@ -21,7 +21,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.roundToInt
 import android.content.Intent
-import com.davidwxcui.waterwise.minigame.GameActivity
+import com.davidwxcui.waterwise.minigame.RoomMatchActivity
 
 class HomeFragment : Fragment() {
 
@@ -171,7 +171,7 @@ class HomeFragment : Fragment() {
         }
 
         binding.btnGame.setOnClickListener {
-            startActivity(Intent(requireContext(), GameActivity::class.java))
+            startActivity(Intent(requireContext(), RoomMatchActivity::class.java))
         }
     }
 

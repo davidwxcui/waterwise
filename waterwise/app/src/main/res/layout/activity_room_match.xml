@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/roomRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:clipToPadding="false"
+    android:paddingTop="16dp"
+    android:paddingBottom="16dp"
+    android:paddingStart="24dp"
+    android:paddingEnd="24dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvUid"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="UID: -"
+            android:textSize="14sp"
+            android:layout_marginBottom="16dp" />
+
+        <EditText
+            android:id="@+id/etRoomId"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Room ID (join room)"
+            android:inputType="text"
+            android:layout_marginBottom="12dp" />
+
+        <EditText
+            android:id="@+id/etPassword"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Room password"
+            android:inputType="textPassword"
+            android:layout_marginBottom="24dp" />
+
+        <Button
+            android:id="@+id/btnCreateRoom"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Create Room"
+            android:layout_marginTop="8dp" />
+
+        <Button
+            android:id="@+id/btnJoinRoom"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Join Room"
+            android:layout_marginTop="12dp" />
+
+        <Button
+            android:id="@+id/btnReenterRoom"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Re-enter Last Room"
+            android:layout_marginTop="24dp" />
+
+        <Button
+            android:id="@+id/btnBack"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Back"
+            android:layout_marginTop="16dp" />
+
+    </LinearLayout>
+
+</androidx.core.widget.NestedScrollView>
