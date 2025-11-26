@@ -28,7 +28,7 @@ import kotlin.random.Random
 // ================== DATA MODELS ==================
 
 data class PlayerState(
-    val coins: Int = 10000,
+    val coins: Int = 100000,
     val position: Int = 0,
     val diceLeft: Int = 20,
     val ownedProperties: List<String> = emptyList()
@@ -851,7 +851,7 @@ class GameActivity : AppCompatActivity() {
     /** Rent formula when landing on someone else's property */
     private fun calculateRent(info: PropertyInfo): Int {
         // Example: rent is 2x income per turn
-        return info.incomePerTurn * 1
+        return info.incomePerTurn * 2
     }
 
     /** Handle landing on a property tile (buy, own, or pay rent) */
@@ -1222,7 +1222,7 @@ class GameActivity : AppCompatActivity() {
         saveRoomBoard()
 
         playerState = PlayerState(
-            coins = 10000,
+            coins = 100000,
             position = 0,
             diceLeft = 20,
             ownedProperties = emptyList()
