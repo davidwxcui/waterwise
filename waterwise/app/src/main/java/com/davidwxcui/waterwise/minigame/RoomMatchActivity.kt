@@ -45,7 +45,6 @@ class RoomMatchActivity : AppCompatActivity() {
         etPassword = findViewById(R.id.etPassword)
         btnCreateRoom = findViewById(R.id.btnCreateRoom)
         btnJoinRoom = findViewById(R.id.btnJoinRoom)
-        btnReenterRoom = findViewById(R.id.btnReenterRoom)
         btnBack = findViewById(R.id.btnBack)
 
 
@@ -132,28 +131,6 @@ class RoomMatchActivity : AppCompatActivity() {
             }
         }
 
-        // 4. 按钮：手动重进上次房间（保留作为备选）
-        btnReenterRoom.setOnClickListener {
-            lifecycleScope.launch {
-                val roomId = withContext(Dispatchers.IO) {
-                    roomStorage.fetchCurrentRoomId(uid)
-                }
-                if (roomId.isNullOrEmpty()) {
-                    Toast.makeText(
-                        this@RoomMatchActivity,
-                        "No active room for this user.",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                } else {
-                    Toast.makeText(
-                        this@RoomMatchActivity,
-                        "Re-enter room: $roomId",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    openGame(roomId)
-                }
-            }
-        }
 
         btnBack.setOnClickListener {
             val intent = Intent(this, MainActivity::class.java)

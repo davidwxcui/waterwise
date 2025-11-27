@@ -24,6 +24,8 @@ import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.*
 import kotlinx.coroutines.tasks.await
 import kotlin.random.Random
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 
 // ================== DATA MODELS ==================
 
@@ -100,6 +102,15 @@ class GameActivity : AppCompatActivity() {
         "Yellow",
         "Purple"
     )
+
+    private val PLAYER_COLOR_ICONS = listOf(
+        R.drawable.ic_player_red,
+        R.drawable.ic_player_blue,
+        R.drawable.ic_player_green,
+        R.drawable.ic_player_yellow,
+        R.drawable.ic_player_purple
+    )
+
 
     // 8x5 outer ring with 22 tiles
     private val tilePositions = listOf(
@@ -269,12 +280,14 @@ class GameActivity : AppCompatActivity() {
     }
 
     private fun showRoomIdDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("Room ID")
-            .setMessage(roomId)
-            .setPositiveButton("OK", null)
-            .show()
+        val msg = "Room ID:\n$roomId"
+        showGameMessageDialog(
+            iconRes = R.drawable.ic_dice,
+            title = "Room ID",
+            message = msg
+        )
     }
+
 
     /** Show list of members (names only, no colors) */
     private fun showRoomMembersDialog() {
@@ -286,11 +299,11 @@ class GameActivity : AppCompatActivity() {
 
                 val snapshot = membersRef.get().await()
                 if (snapshot.isEmpty) {
-                    AlertDialog.Builder(this@GameActivity)
-                        .setTitle("Room Members")
-                        .setMessage("No players in this room.")
-                        .setPositiveButton("OK", null)
-                        .show()
+                    showGameMessageDialog(
+                        iconRes = R.drawable.ic_dice,
+                        title = "Room Members",
+                        message = "No players in this room."
+                    )
                     return@launch
                 }
 
@@ -309,17 +322,17 @@ class GameActivity : AppCompatActivity() {
 
                 val msg = names.joinToString("\n")
 
-                AlertDialog.Builder(this@GameActivity)
-                    .setTitle("Room Members")
-                    .setMessage(msg)
-                    .setPositiveButton("OK", null)
-                    .show()
+                showGameMessageDialog(
+                    iconRes = R.drawable.ic_dice,
+                    title = "Room Members",
+                    message = msg
+                )
             } catch (e: Exception) {
-                AlertDialog.Builder(this@GameActivity)
-                    .setTitle("Room Members")
-                    .setMessage("Failed to load members: ${e.message}")
-                    .setPositiveButton("OK", null)
-                    .show()
+                showGameMessageDialog(
+                    iconRes = R.drawable.ic_dice,
+                    title = "Room Members",
+                    message = "Failed to load members: ${e.message}"
+                )
             }
         }
     }
@@ -328,41 +341,88 @@ class GameActivity : AppCompatActivity() {
     private fun showPlayerColorsDialog() {
         lifecycleScope.launch {
             if (playerMarkers.isEmpty()) {
-                // Try to refresh once if not loaded yet
                 refreshPlayerMarkers()
             }
-            if (playerMarkers.isEmpty()) {
-                AlertDialog.Builder(this@GameActivity)
-                    .setTitle("Player Colors")
-                    .setMessage("No players in this room.")
-                    .setPositiveButton("OK", null)
-                    .show()
-                return@launch
-            }
 
-            val msg = buildString {
+            val dialogView = layoutInflater.inflate(R.layout.dialog_player_colors, null)
+            val container = dialogView.findViewById<LinearLayout>(R.id.containerPlayerColors)
+            val btnOk = dialogView.findViewById<Button>(R.id.btnPlayerColorOk)
+
+            if (playerMarkers.isEmpty()) {
+                val tv = TextView(this@GameActivity).apply {
+                    text = "No players in this room."
+                    setTextColor(0xFFFFFFFF.toInt())
+                    textSize = 14f
+                }
+                container.addView(tv)
+            } else {
+                val density = resources.displayMetrics.density
+                val verticalPadding = (8 * density).toInt()
+                val iconSize = (20 * density).toInt()
+                val textMarginStart = (8 * density).toInt()
+
                 playerMarkers.forEach { marker ->
-                    append("${marker.name}: ${marker.colorName}\n")
+                    val idx = PLAYER_COLOR_NAMES.indexOf(marker.colorName)
+                    val iconRes = if (idx in PLAYER_COLOR_ICONS.indices) {
+                        PLAYER_COLOR_ICONS[idx]
+                    } else {
+                        R.drawable.ic_dice
+                    }
+
+                    val row = LinearLayout(this@GameActivity).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding(0, verticalPadding, 0, verticalPadding)
+                    }
+
+                    val iv = ImageView(this@GameActivity).apply {
+                        layoutParams = LinearLayout.LayoutParams(iconSize, iconSize)
+                        setImageResource(iconRes)
+                    }
+
+                    val tv = TextView(this@GameActivity).apply {
+                        layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        ).also { lp ->
+                            lp.marginStart = textMarginStart
+                        }
+                        text = "${marker.name}: ${marker.colorName}"
+                        setTextColor(0xFFFFFFFF.toInt())
+                        textSize = 14f
+                    }
+
+                    row.addView(iv)
+                    row.addView(tv)
+                    container.addView(row)
                 }
             }
 
-            AlertDialog.Builder(this@GameActivity)
-                .setTitle("Player Colors")
-                .setMessage(msg)
-                .setPositiveButton("OK", null)
-                .show()
+            val dialog = AlertDialog.Builder(this@GameActivity)
+                .setView(dialogView)
+                .setCancelable(true)
+                .create()
+
+            btnOk.setOnClickListener { dialog.dismiss() }
+
+            dialog.show()
+            dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
         }
     }
 
+
+
     private fun promptLeaveRoom() {
-        AlertDialog.Builder(this)
-            .setTitle("Leave Room")
-            .setMessage("Are you sure you want to leave this room?")
-            .setNegativeButton("Cancel", null)
-            .setPositiveButton("Leave") { _, _ ->
-                leaveRoomFromMenu()
-            }
-            .show()
+        showGameConfirmDialog(
+            iconRes = R.drawable.ic_dice,
+            title = "Leave Room",
+            message = "Are you sure you want to leave this room?",
+            positiveText = "Leave",
+            negativeText = "Cancel"
+        ) {
+            // 点击 Leave 后执行
+            leaveRoomFromMenu()
+        }
     }
 
     /** Menu "Leave Room": only call leaveRoom API, do not delete player data here */
@@ -416,7 +476,7 @@ class GameActivity : AppCompatActivity() {
             val container = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                setBackgroundResource(android.R.drawable.btn_default)
+                setBackgroundResource(R.drawable.bg_tile_normal)
             }
 
             val iconView = ImageView(this).apply {
@@ -798,11 +858,11 @@ class GameActivity : AppCompatActivity() {
                 "Tile index: $tileIndex\nType: Random event tile\n\n(No detailed event template found.)"
             }
 
-            AlertDialog.Builder(this)
-                .setTitle("Tile Info")
-                .setMessage(msg)
-                .setPositiveButton("OK", null)
-                .show()
+            showGameMessageDialog(
+                iconRes = R.drawable.ic_dice,
+                title = "Tile Info",
+                message = msg
+            )
         }
     }
 
@@ -817,12 +877,13 @@ class GameActivity : AppCompatActivity() {
             append("Your coins: ${playerState.coins}")
         }
 
-        AlertDialog.Builder(this)
-            .setTitle("Tile Info")
-            .setMessage(msg)
-            .setPositiveButton("OK", null)
-            .show()
+        showGameMessageDialog(
+            iconRes = R.drawable.ic_coin,
+            title = "Tile Info",
+            message = msg
+        )
     }
+
 
     // ---------- Dice roll ----------
 
@@ -891,47 +952,71 @@ class GameActivity : AppCompatActivity() {
         propertyId: String,
         info: PropertyInfo
     ) {
-        val message = buildString {
-            append("You found a property for sale!\n\n")
-            append("Name: ${info.name}\n")
-            append("Price: ${info.price} coins\n")
-            append("Income per turn: ${info.incomePerTurn} coins\n\n")
-            append("Your coins: ${playerState.coins}")
+        val dialogView = layoutInflater.inflate(R.layout.dialog_property_buy, null)
+
+        val tvTitle = dialogView.findViewById<TextView>(R.id.tvDialogTitleProp)
+        val tvName = dialogView.findViewById<TextView>(R.id.tvPropName)
+        val tvPrice = dialogView.findViewById<TextView>(R.id.tvPropPrice)
+        val tvIncome = dialogView.findViewById<TextView>(R.id.tvPropIncome)
+        val tvCoins = dialogView.findViewById<TextView>(R.id.tvPropCoins)
+        val ivIcon = dialogView.findViewById<ImageView>(R.id.ivPropertyIcon)
+        val btnBuy = dialogView.findViewById<Button>(R.id.btnBuyProp)
+        val btnSkip = dialogView.findViewById<Button>(R.id.btnSkipProp)
+
+        tvTitle.text = "Buy Property?"
+        tvName.text = info.name
+        tvPrice.text = "Price: ${info.price} coins"
+        tvIncome.text = "Income per turn: ${info.incomePerTurn} coins"
+        tvCoins.text = "Your coins: ${playerState.coins}"
+
+        val resId = propertyIdToIconRes[propertyId]
+        if (resId != null) {
+            ivIcon.setImageResource(resId)
+        } else {
+            ivIcon.setImageResource(R.drawable.ic_coin)
         }
 
-        AlertDialog.Builder(this)
-            .setTitle("Buy Property?")
-            .setMessage(message)
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
             .setCancelable(true)
-            .setPositiveButton("Buy") { _, _ ->
-                if (playerState.coins < info.price) {
-                    Toast.makeText(
-                        this,
-                        "Not enough coins to buy this property.",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    val desc = "You wanted to buy ${info.name}, but didn't have enough coins."
-                    endTurn(newPosition, dice, 0, desc, null)
-                } else {
-                    val newList = playerState.ownedProperties.toMutableList()
-                    if (!newList.contains(propertyId)) newList.add(propertyId)
-                    propertyOwners[propertyId] = uid
-                    saveRoomBoard()
+            .create()
 
-                    val desc = "You bought property: ${info.name} for ${info.price} coins."
-                    endTurn(newPosition, dice, -info.price, desc, newList)
-                }
-            }
-            .setNegativeButton("Skip") { _, _ ->
-                val desc = "You decided not to buy ${info.name}."
+        btnBuy.setOnClickListener {
+            dialog.dismiss()
+            if (playerState.coins < info.price) {
+                Toast.makeText(
+                    this,
+                    "Not enough coins to buy this property.",
+                    Toast.LENGTH_SHORT
+                ).show()
+                val desc = "You wanted to buy ${info.name}, but didn't have enough coins."
                 endTurn(newPosition, dice, 0, desc, null)
+            } else {
+                val newList = playerState.ownedProperties.toMutableList()
+                if (!newList.contains(propertyId)) newList.add(propertyId)
+                propertyOwners[propertyId] = uid
+                saveRoomBoard()
+
+                val desc = "You bought property: ${info.name} for ${info.price} coins."
+                endTurn(newPosition, dice, -info.price, desc, newList)
             }
-            .setOnCancelListener {
-                val desc = "You hesitated and walked away from ${info.name}."
-                endTurn(newPosition, dice, 0, desc, null)
-            }
-            .show()
+        }
+
+        btnSkip.setOnClickListener {
+            dialog.dismiss()
+            val desc = "You decided not to buy ${info.name}."
+            endTurn(newPosition, dice, 0, desc, null)
+        }
+
+        dialog.setOnCancelListener {
+            val desc = "You hesitated and walked away from ${info.name}."
+            endTurn(newPosition, dice, 0, desc, null)
+        }
+
+        dialog.show()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
     }
+
 
     private fun showEventDialog(newPosition: Int, dice: Int, template: TileEventTemplate?) {
         if (template == null || template.choices.size < 2) {
@@ -943,40 +1028,66 @@ class GameActivity : AppCompatActivity() {
         val choice1 = template.choices[0]
         val choice2 = template.choices[1]
 
-        val message = buildString {
-            append("You landed on tile $newPosition.\n\n")
-            append(template.description)
-            append("\n\n")
+        val dialogView = layoutInflater.inflate(R.layout.dialog_event_choice, null)
 
-            append("Option 1: ${choice1.label}\n")
+        val ivIcon = dialogView.findViewById<ImageView>(R.id.ivDialogIcon)
+        val tvTitle = dialogView.findViewById<TextView>(R.id.tvDialogTitle)
+        val tvDesc = dialogView.findViewById<TextView>(R.id.tvEventDesc)
+        val tvOpt1Title = dialogView.findViewById<TextView>(R.id.tvOption1Title)
+        val tvOpt1Detail = dialogView.findViewById<TextView>(R.id.tvOption1Detail)
+        val tvOpt2Title = dialogView.findViewById<TextView>(R.id.tvOption2Title)
+        val tvOpt2Detail = dialogView.findViewById<TextView>(R.id.tvOption2Detail)
+        val btnChoice1 = dialogView.findViewById<Button>(R.id.btnChoice1)
+        val btnChoice2 = dialogView.findViewById<Button>(R.id.btnChoice2)
+
+        ivIcon.setImageResource(R.drawable.ic_dice)
+        tvTitle.text = template.title
+        tvDesc.text = template.description
+
+        tvOpt1Title.text = choice1.label
+        tvOpt1Detail.text = buildString {
             append("Success rate: ${choice1.successRatePercent}%\n")
             append("On success: ${choice1.successCoinDelta} coins\n")
-            append("On fail: ${choice1.failCoinDelta} coins\n\n")
+            append("On fail: ${choice1.failCoinDelta} coins")
+        }
 
-            append("Option 2: ${choice2.label}\n")
+        tvOpt2Title.text = choice2.label
+        tvOpt2Detail.text = buildString {
             append("Success rate: ${choice2.successRatePercent}%\n")
             append("On success: ${choice2.successCoinDelta} coins\n")
             append("On fail: ${choice2.failCoinDelta} coins")
         }
 
-        AlertDialog.Builder(this)
-            .setTitle(template.title)
-            .setMessage(message)
+        btnChoice1.text = choice1.label
+        btnChoice2.text = choice2.label
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
             .setCancelable(true)
-            .setPositiveButton(choice1.label) { _, _ ->
-                val result = resolveChoice(choice1, template.title)
-                applyEventChoice(newPosition, dice, result)
-            }
-            .setNegativeButton(choice2.label) { _, _ ->
-                val result = resolveChoice(choice2, template.title)
-                applyEventChoice(newPosition, dice, result)
-            }
-            .setOnCancelListener {
-                val result = resolveChoice(choice2, template.title)
-                applyEventChoice(newPosition, dice, result)
-            }
-            .show()
+            .create()
+
+        btnChoice1.setOnClickListener {
+            dialog.dismiss()
+            val result = resolveChoice(choice1, template.title)
+            applyEventChoice(newPosition, dice, result)
+        }
+
+        btnChoice2.setOnClickListener {
+            dialog.dismiss()
+            val result = resolveChoice(choice2, template.title)
+            applyEventChoice(newPosition, dice, result)
+        }
+
+        dialog.setOnCancelListener {
+            // 和原来逻辑一样，取消等同选择第二个选项
+            val result = resolveChoice(choice2, template.title)
+            applyEventChoice(newPosition, dice, result)
+        }
+
+        dialog.show()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
     }
+
 
     private fun resolveChoice(choice: EventChoice, title: String): ResolvedEvent {
         val roll = Random.nextInt(0, 100)
@@ -1039,6 +1150,13 @@ class GameActivity : AppCompatActivity() {
         updateUI()
         savePlayerState()
 
+        tvEvent.text = finalDesc
+        tvEvent.alpha = 0f
+        tvEvent.animate()
+            .alpha(1f)
+            .setDuration(220)
+            .start()
+
         lifecycleScope.launch {
             refreshPlayerMarkers()
             updateBoardHighlight()
@@ -1073,15 +1191,31 @@ class GameActivity : AppCompatActivity() {
             append("You will leave this room.")
         }
 
-        AlertDialog.Builder(this)
-            .setTitle("Game Over")
-            .setMessage(message)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_game_over, null)
+
+        val ivIcon = dialogView.findViewById<ImageView>(R.id.ivGameOverIcon)
+        val tvTitle = dialogView.findViewById<TextView>(R.id.tvGameOverTitle)
+        val tvMsg = dialogView.findViewById<TextView>(R.id.tvGameOverMessage)
+        val btnLeave = dialogView.findViewById<Button>(R.id.btnLeaveRoom)
+
+        ivIcon.setImageResource(R.drawable.ic_coin) // 有骷髅图标的话可以换成别的
+        tvTitle.text = "Game Over"
+        tvMsg.text = message
+
+        val gameOverDialog = AlertDialog.Builder(this)
+            .setView(dialogView)
             .setCancelable(false)
-            .setPositiveButton("Leave Room") { dialog, _ ->
-                dialog.dismiss()
-                onGameOverExitRoom()
-            }
-            .show()
+            .create()
+
+        btnLeave.setOnClickListener {
+            gameOverDialog.dismiss()
+            onGameOverExitRoom()
+        }
+
+        gameOverDialog.show()
+        gameOverDialog.window?.setBackgroundDrawable(
+            ColorDrawable(Color.TRANSPARENT)
+        )
     }
 
     /** On bankruptcy: delete this member doc, then call leaveRoom */
@@ -1129,6 +1263,77 @@ class GameActivity : AppCompatActivity() {
         }
     }
 
+    private fun showGameConfirmDialog(
+        iconRes: Int,
+        title: String,
+        message: String,
+        positiveText: String,
+        negativeText: String = "Cancel",
+        onPositive: () -> Unit
+    ) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_game_confirm, null)
+
+        val ivIcon = dialogView.findViewById<ImageView>(R.id.ivConfirmIcon)
+        val tvTitle = dialogView.findViewById<TextView>(R.id.tvConfirmTitle)
+        val tvMsg = dialogView.findViewById<TextView>(R.id.tvConfirmMessage)
+        val btnNegative = dialogView.findViewById<Button>(R.id.btnConfirmNegative)
+        val btnPositive = dialogView.findViewById<Button>(R.id.btnConfirmPositive)
+
+        ivIcon.setImageResource(iconRes)
+        tvTitle.text = title
+        tvMsg.text = message
+        btnNegative.text = negativeText
+        btnPositive.text = positiveText
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setCancelable(true)
+            .create()
+
+        btnNegative.setOnClickListener { dialog.dismiss() }
+        btnPositive.setOnClickListener {
+            dialog.dismiss()
+            onPositive()
+        }
+
+        dialog.show()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+    }
+
+    private fun showGameMessageDialog(
+        iconRes: Int,
+        title: String,
+        message: String,
+        onDismiss: (() -> Unit)? = null
+    ) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_game_message, null)
+
+        val ivIcon = dialogView.findViewById<ImageView>(R.id.ivDialogIcon)
+        val tvTitle = dialogView.findViewById<TextView>(R.id.tvDialogTitle)
+        val tvMessage = dialogView.findViewById<TextView>(R.id.tvDialogMessage)
+        val btnOk = dialogView.findViewById<Button>(R.id.btnDialogOk)
+
+        ivIcon.setImageResource(iconRes)
+        tvTitle.text = title
+        tvMessage.text = message
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setCancelable(true)
+            .create()
+
+        btnOk.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.setOnDismissListener {
+            onDismiss?.invoke()
+        }
+
+        dialog.show()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+    }
+
     private fun showTurnResultDialog(
         newPosition: Int,
         dice: Int,
@@ -1142,17 +1347,15 @@ class GameActivity : AppCompatActivity() {
             append("Total coins: ${playerState.coins}")
         }
 
-        AlertDialog.Builder(this)
-            .setTitle("Turn Result")
-            .setMessage(message)
-            .setPositiveButton("OK") { dialog, _ ->
-                dialog.dismiss()
-            }
-            .setOnDismissListener {
-                btnRollDice.isEnabled = true
-            }
-            .show()
+        showGameMessageDialog(
+            iconRes = R.drawable.ic_dice,
+            title = "Turn Result",
+            message = message
+        ) {
+            btnRollDice.isEnabled = true
+        }
     }
+
 
     // ---------- Dice animation ----------
 
@@ -1168,18 +1371,21 @@ class GameActivity : AppCompatActivity() {
         }
 
         val rotate = ObjectAnimator.ofFloat(diceImageView, "rotation", 0f, 360f)
+        val flipY = ObjectAnimator.ofFloat(diceImageView, "rotationY", 0f, 360f)
         val scaleX = ObjectAnimator.ofFloat(diceImageView, "scaleX", 1f, 1.3f, 1f)
         val scaleY = ObjectAnimator.ofFloat(diceImageView, "scaleY", 1f, 1.3f, 1f)
 
         rotate.duration = duration
+        flipY.duration = duration
         scaleX.duration = duration
         scaleY.duration = duration
 
         AnimatorSet().apply {
-            playTogether(rotate, scaleX, scaleY, frameAnimator)
+            playTogether(rotate, flipY, scaleX, scaleY, frameAnimator)
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
                     diceImageView.rotation = 0f
+                    diceImageView.rotationY = 0f
                     diceImageView.scaleX = 1f
                     diceImageView.scaleY = 1f
                     diceImageView.setImageResource(diceDrawables[finalDice - 1])
@@ -1190,30 +1396,54 @@ class GameActivity : AppCompatActivity() {
         }
     }
 
+
     // ---------- UI & state ----------
 
     private fun updateUI() {
         tvCoins.text = "Coins: ${playerState.coins}"
         tvDiceLeft.text = "Dice left: ${playerState.diceLeft}"
-        tvEvent.text = ""
         updateBoardHighlight()
         updateTileIcons()
     }
+
 
     /** Use all players' markers to color the board tiles */
     private fun updateBoardHighlight() {
         tileContainers.forEachIndexed { index, container ->
             val playersHere = playerMarkers.filter { it.position == index }
-            if (playersHere.isEmpty()) {
-                container.setBackgroundResource(android.R.drawable.btn_default)
-            } else if (playersHere.size == 1) {
-                container.setBackgroundColor(playersHere[0].color)
-            } else {
-                // Multiple players on the same tile -> gray color
-                container.setBackgroundColor(0xFF777777.toInt())
+            when {
+                playersHere.isEmpty() -> {
+                    container.setBackgroundResource(R.drawable.bg_tile_normal)
+                }
+                playersHere.size == 1 -> {
+                    container.setBackgroundColor(playersHere[0].color)
+                }
+                else -> {
+                    container.setBackgroundColor(0xFF777777.toInt())
+                }
             }
         }
+
+        val myPos = playerState.position
+        tileContainers.getOrNull(myPos)?.apply {
+            animate().cancel()
+            scaleX = 1f
+            scaleY = 1f
+            animate()
+                .scaleX(1.06f)
+                .scaleY(1.06f)
+                .setDuration(120)
+                .withEndAction {
+                    animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(120)
+                        .start()
+                }
+                .start()
+        }
     }
+
 
     private fun startNewGame() {
         initTileEvents()

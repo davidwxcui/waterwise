@@ -8,45 +8,82 @@
     android:paddingTop="16dp"
     android:paddingBottom="16dp"
     android:paddingStart="12dp"
-    android:paddingEnd="12dp">
+    android:paddingEnd="12dp"
+    android:background="@drawable/bg_game_root">
 
     <LinearLayout
         android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
+        <!-- 顶部 HUD：金币 + 剩余骰子 -->
         <LinearLayout
+            android:id="@+id/topHud"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
+            android:background="@drawable/bg_hud_panel"
+            android:padding="12dp"
             android:gravity="center_vertical"
-            android:layout_marginBottom="8dp">
+            android:layout_marginBottom="12dp">
 
-            <TextView
-                android:id="@+id/tvCoins"
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Coins: 0"
-                android:textSize="18sp" />
+                android:gravity="start|center_vertical">
 
-            <TextView
-                android:id="@+id/tvDiceLeft"
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_coin"
+                    android:contentDescription="@string/app_name"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/tvCoins"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Coins: 0"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/white" />
+            </LinearLayout>
+
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:gravity="end"
-                android:text="Dice left: 0"
-                android:textSize="18sp" />
+                android:gravity="end|center_vertical">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_dice"
+                    android:contentDescription="@string/app_name"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/tvDiceLeft"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Dice left: 0"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/white" />
+            </LinearLayout>
+
         </LinearLayout>
 
+        <!-- 棋盘区域 -->
         <FrameLayout
             android:id="@+id/boardContainer"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="8dp">
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/bg_board_panel"
+            android:padding="6dp">
 
             <GridLayout
                 android:id="@+id/boardGrid"
@@ -61,17 +98,24 @@
                 android:layout_width="80dp"
                 android:layout_height="80dp"
                 android:layout_gravity="center"
-                android:src="@drawable/dice_1" />
+                android:src="@drawable/dice_1"
+                android:elevation="4dp" />
         </FrameLayout>
 
+        <!-- 事件描述区域 -->
         <TextView
             android:id="@+id/tvEvent"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="14sp"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="8dp" />
+            android:textColor="@android:color/white"
+            android:background="@drawable/bg_event_panel"
+            android:padding="12dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="12dp"
+            android:text="Roll the dice to start your adventure!" />
 
+        <!-- Roll Dice 大按钮 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -81,10 +125,16 @@
             <Button
                 android:id="@+id/btnRollDice"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="48dp"
                 android:text="Roll Dice"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="8dp" />
+                android:textAllCaps="false"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:drawableStart="@drawable/ic_dice"
+                android:drawablePadding="8dp"
+                android:background="@drawable/bg_roll_button"
+                android:textColor="@android:color/white" />
+
 
         </LinearLayout>
 
