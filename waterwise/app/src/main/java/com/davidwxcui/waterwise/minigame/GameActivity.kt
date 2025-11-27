@@ -28,9 +28,9 @@ import kotlin.random.Random
 // ================== DATA MODELS ==================
 
 data class PlayerState(
-    val coins: Int = 100000,
+    val coins: Int = 10000,
     val position: Int = 0,
-    val diceLeft: Int = 20,
+    val diceLeft: Int = 0,
     val ownedProperties: List<String> = emptyList()
 )
 
@@ -1222,9 +1222,9 @@ class GameActivity : AppCompatActivity() {
         saveRoomBoard()
 
         playerState = PlayerState(
-            coins = 100000,
+            coins = 10000,
             position = 0,
-            diceLeft = 20,
+            diceLeft = 0,
             ownedProperties = emptyList()
         )
         updateUI()
@@ -1284,19 +1284,52 @@ class GameActivity : AppCompatActivity() {
                 .await()
 
             if (playerSnap.exists()) {
-                val coins = playerSnap.getLong("coins")?.toInt() ?: 100000
+                val coins = playerSnap.getLong("coins")?.toInt() ?: 10000
                 val position = playerSnap.getLong("position")?.toInt() ?: 0
-                val diceLeft = playerSnap.getLong("diceLeft")?.toInt() ?: 20
+                val diceLeft = playerSnap.getLong("diceLeft")?.toInt() ?: 0
                 val ownedPropsAny = playerSnap.get("ownedProperties") as? List<*>
                 val ownedProps = ownedPropsAny?.mapNotNull { it as? String } ?: emptyList()
 
                 playerState = PlayerState(coins, position, diceLeft, ownedProps)
                 updateUI()
             } else {
+                // New player in this room: start with default state.
                 playerState = PlayerState()
                 updateUI()
                 savePlayerState()
             }
+
+            // ---- NEW: daily dice bonus based on yesterday's drink volume ----
+            try {
+                val result = AddDiceDaily.computeDailyDice(
+                    context = this@GameActivity,
+                    uid = uid,
+                    roomId = roomId,
+                    firestore = firestore
+                )
+
+                // Only show message / change dice on the first calculation of the day.
+                if (result.isFirstTimeToday && result.diceToAdd > 0) {
+                    val addedDice = result.diceToAdd
+
+                    // Add bonus dice to the existing diceLeft.
+                    playerState = playerState.copy(
+                        diceLeft = playerState.diceLeft + addedDice
+                    )
+                    updateUI()
+                    savePlayerState()
+
+                    Toast.makeText(
+                        this@GameActivity,
+                        "Yesterday you drank ${result.yesterdayVolumeMl} ml, so you received $addedDice dice!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+// ---- NEW END ----
+
 
             refreshPlayerMarkers()
             updateBoardHighlight()
