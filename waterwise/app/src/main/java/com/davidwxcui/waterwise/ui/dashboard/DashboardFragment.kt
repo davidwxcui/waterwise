@@ -10,17 +10,17 @@ import android.widget.TableLayout
 import android.widget.TableRow
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import androidx.core.view.updatePadding
+import androidx.lifecycle.lifecycleScope
 import com.davidwxcui.waterwise.R
 import com.davidwxcui.waterwise.databinding.FragmentDashboardBinding
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.launch
 import lecho.lib.hellocharts.model.*
 import lecho.lib.hellocharts.view.LineChartView
 import lecho.lib.hellocharts.view.ColumnChartView
-import java.io.BufferedReader
-import java.io.File
-import java.io.FileReader
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.roundToInt
@@ -31,6 +31,8 @@ class DashboardFragment : Fragment() {
     private var _binding: FragmentDashboardBinding? = null
     private val binding get() = _binding!!
 
+    private lateinit var viewModel: DashboardViewModel
+
     // Charts
     private lateinit var lineChartView: LineChartView
     private var lineChartData: LineChartData = LineChartData()
@@ -39,7 +41,7 @@ class DashboardFragment : Fragment() {
     private var columnChartData: ColumnChartData = ColumnChartData()
 
     // Data / Filters
-    private var allRows: List<DrinkRow> = emptyList()
+    private var allRows: List<DashboardViewModel.DrinkRow> = emptyList()
     private val selectedTypes: MutableSet<String> = linkedSetOf()
     private var rangeStart: Long? = null
     private var rangeEnd: Long? = null
@@ -52,6 +54,9 @@ class DashboardFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        // Initialize ViewModel
+        viewModel = ViewModelProvider(this).get(DashboardViewModel::class.java)
+
         // Views
         columnChartView = binding.columnChart
         lineChartView = binding.lineChart
@@ -59,7 +64,36 @@ class DashboardFragment : Fragment() {
         setupBarChart()
         setupLineChart()
 
-        refreshData()
+        // Observe LiveData
+        viewModel.drinkLogs.observe(viewLifecycleOwner) { rows ->
+            allRows = rows
+            val allTypes = rows.map { it.type }.distinct().sorted()
+            if (selectedTypes.isEmpty()) selectedTypes += allTypes
+            else {
+                selectedTypes.retainAll(allTypes.toSet())
+                if (selectedTypes.isEmpty()) selectedTypes += allTypes
+            }
+            applyFiltersAndRender()
+        }
+
+        viewModel.aiRecommendation.observe(viewLifecycleOwner) { recommendation ->
+            if (recommendation.isNotEmpty()) {
+                binding.tvAiRecommendation.visibility = View.VISIBLE
+                binding.tvRecommendationText.text = recommendation
+            } else {
+                binding.tvAiRecommendation.visibility = View.GONE
+            }
+        }
+
+        viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+            if (isLoading) {
+                binding.tvAiRecommendation.visibility = View.VISIBLE
+                binding.tvRecommendationText.text = "Loading recommendation..."
+            }
+        }
+
+        // Fetch data
+        viewModel.fetchDrinkLogs()
 
         // actions
         binding.btnTypeFilter.setOnClickListener { showTypePickerDialog() }
@@ -75,7 +109,7 @@ class DashboardFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        refreshData()
+        viewModel.fetchDrinkLogs()
     }
 
     override fun onDestroyView() {
@@ -83,7 +117,7 @@ class DashboardFragment : Fragment() {
         _binding = null
     }
 
-    // ---------- 固定颜色：图表 & 历史共用 ----------
+    // ---------- Color utilities ----------
     private fun colorForType(type: String): Int {
         val preset = mapOf(
             "Water" to 0xFF1E88E5.toInt(),
@@ -92,9 +126,9 @@ class DashboardFragment : Fragment() {
             "Juice" to 0xFFFB8C00.toInt(),
             "Soda" to 0xFFE53935.toInt(),
             "Milk" to 0xFF00897B.toInt(),
-            "Beer" to 0xFF6D4C41.toInt(),
-            "Wine" to 0xFFC2185B.toInt(),
-            "Other" to 0xFF546E7A.toInt()
+            "Yogurt" to 0xFF6D4C41.toInt(),
+            "Alcohol" to 0xFFC2185B.toInt(),
+            "Sparkling" to 0xFF546E7A.toInt()
         )
         preset[type]?.let { return it }
 
@@ -118,15 +152,6 @@ class DashboardFragment : Fragment() {
         val g = ((g1 + m) * 255).toInt().coerceIn(0, 255)
         val b = ((b1 + m) * 255).toInt().coerceIn(0, 255)
         return Color.rgb(r, g, b)
-    }
-
-    private fun isColorDark(color: Int): Boolean {
-        val r = Color.red(color) / 255.0
-        val g = Color.green(color) / 255.0
-        val b = Color.blue(color) / 255.0
-        val srgb = { c: Double -> if (c <= 0.03928) c / 12.92 else Math.pow((c + 0.055) / 1.055, 2.4) }
-        val lum = 0.2126 * srgb(r) + 0.7152 * srgb(g) + 0.0722 * srgb(b)
-        return lum < 0.5
     }
 
     private fun withAlpha(color: Int, alpha: Float): Int =
@@ -161,7 +186,7 @@ class DashboardFragment : Fragment() {
     }
 
     /** 折线图 */
-    private fun updateHelloChart(rows: List<DrinkRow>) {
+    private fun updateHelloChart(rows: List<DashboardViewModel.DrinkRow>) {
         if (rows.isEmpty()) {
             binding.lineChart.visibility = View.GONE
             binding.tvEmptyChart.visibility = View.VISIBLE
@@ -197,6 +222,7 @@ class DashboardFragment : Fragment() {
                 setCubic(false)
                 setHasPoints(true)
                 setHasLines(true)
+                pointRadius = 5
             }
         }
 
@@ -226,17 +252,56 @@ class DashboardFragment : Fragment() {
         lineChartView.maximumViewport = vp
         lineChartView.currentViewport = vp
         lineChartView.invalidate()
+
+        setupChartTooltip(rows, times, indexByTs)
+    }
+
+    private fun setupChartTooltip(rows: List<DashboardViewModel.DrinkRow>, times: List<Long>, indexByTs: Map<Long, Int>) {
+        lineChartView.setOnTouchListener { _, event ->
+            val x = event.x
+            val y = event.y
+
+            val viewport = lineChartView.currentViewport
+            val chart = lineChartView.chartComputator
+
+            val chartX = (x - chart.contentRectMinusAllMargins.left) / chart.contentRectMinusAllMargins.width() *
+                    (viewport.right - viewport.left) + viewport.left
+            val chartY = (chart.contentRectMinusAllMargins.bottom - y) / chart.contentRectMinusAllMargins.height() *
+                    (viewport.top - viewport.bottom) + viewport.bottom
+
+            val tolerance = 1.0f
+            var closestRow: DashboardViewModel.DrinkRow? = null
+            var minDistance = Float.MAX_VALUE
+
+            rows.forEach { row ->
+                val ts = if (row.timestamp < 1_000_000_000_000L) row.timestamp * 1000 else row.timestamp
+                val pointX = indexByTs[ts]?.toFloat() ?: return@forEach
+                val pointY = row.volumeMl.toFloat()
+
+                val distance = kotlin.math.sqrt(((pointX - chartX) * (pointX - chartX) + (pointY - chartY) * (pointY - chartY)).toDouble()).toFloat()
+                if (distance < tolerance && distance < minDistance) {
+                    minDistance = distance
+                    closestRow = row
+                }
+            }
+
+            if (closestRow != null) {
+                val tooltip = "${closestRow!!.type} - ${closestRow!!.volumeMl}ml"
+                android.widget.Toast.makeText(requireContext(), tooltip, android.widget.Toast.LENGTH_SHORT).show()
+            }
+
+            false
+        }
     }
 
     /** 柱状图 */
-    private fun updateBarChartDaily(rows: List<DrinkRow>) {
-        // 统计一周 7 天总量（受 type 和日期过滤影响）
+    private fun updateBarChartDaily(rows: List<DashboardViewModel.DrinkRow>) {
         val sums = FloatArray(7) { 0f }
         val cal = Calendar.getInstance()
         rows.forEach { r ->
             val ts = if (r.timestamp < 1_000_000_000_000L) r.timestamp * 1000 else r.timestamp
             cal.timeInMillis = ts
-            val dow = cal.get(Calendar.DAY_OF_WEEK) // SUNDAY=1..SATURDAY=7
+            val dow = cal.get(Calendar.DAY_OF_WEEK)
             val idx = dow - 1
             sums[idx] += r.volumeMl.toFloat()
         }
@@ -281,18 +346,6 @@ class DashboardFragment : Fragment() {
     }
 
     // ---------- Filtering / Data glue ----------
-    private fun refreshData() {
-        allRows = readDrinkLog(File(requireContext().filesDir, "drinkLog.csv"))
-
-        val allTypes = allRows.map { it.type }.distinct().sorted()
-        if (selectedTypes.isEmpty()) selectedTypes += allTypes
-        else {
-            selectedTypes.retainAll(allTypes.toSet())
-            if (selectedTypes.isEmpty()) selectedTypes += allTypes
-        }
-        applyFiltersAndRender()
-    }
-
     private fun applyFiltersAndRender() {
         val filtered = allRows.filter { r ->
             val okType = selectedTypes.isEmpty() || r.type in selectedTypes
@@ -359,55 +412,8 @@ class DashboardFragment : Fragment() {
         btn.text = "$s ~ $e"
     }
 
-    // ---------- CSV ----------
-    data class DrinkRow(
-        val timestamp: Long,
-        val type: String,
-        val volumeMl: Int,
-        val effectiveMl: Int,
-        val note: String
-    )
-
-    private fun readDrinkLog(file: File): List<DrinkRow> {
-        if (!file.exists()) return emptyList()
-        val out = mutableListOf<DrinkRow>()
-        BufferedReader(FileReader(file)).use { br ->
-            var line = br.readLine()
-            if (line != null && line.startsWith("timestamp")) line = br.readLine()
-            while (line != null) {
-                parseCsv(line)?.let { out += it }
-                line = br.readLine()
-            }
-        }
-        return out
-    }
-
-    private fun parseCsv(line: String): DrinkRow? {
-        val cells = mutableListOf<String>()
-        val sb = StringBuilder()
-        var inQuote = false
-        for (c in line) {
-            when {
-                c == '"' -> inQuote = !inQuote
-                c == ',' && !inQuote -> { cells += sb.toString().trim(); sb.clear() }
-                else -> sb.append(c)
-            }
-        }
-        cells += sb.toString().trim()
-
-        return try {
-            var ts = cells.getOrNull(0)?.toLong() ?: return null
-            if (ts < 1_000_000_000_000L) ts *= 1000
-            val type = cells.getOrNull(1)?.trim()?.trim('"') ?: "Unknown"
-            val vol  = cells.getOrNull(2)?.toIntOrNull() ?: 0
-            val eff  = cells.getOrNull(3)?.toIntOrNull() ?: 0
-            val note = cells.getOrNull(4)?.trim()?.trim('"') ?: ""
-            DrinkRow(ts, type, vol, eff, note)
-        } catch (_: Exception) { null }
-    }
-
     // ---------- History Table----------
-    private fun updateHistoryTable(rows: List<DrinkRow>) {
+    private fun updateHistoryTable(rows: List<DashboardViewModel.DrinkRow>) {
         val table: TableLayout = binding.tableHistory
         table.removeAllViews()
 
@@ -422,7 +428,7 @@ class DashboardFragment : Fragment() {
             return
         }
 
-        val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
         val padH = dp(12); val padV = dp(14)
 
         rows.sortedByDescending { it.timestamp }.forEach { r ->
