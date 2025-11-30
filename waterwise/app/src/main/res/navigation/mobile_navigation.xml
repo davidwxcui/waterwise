@@ -11,6 +11,10 @@
         android:label="@string/title_home"
         tools:layout="@layout/fragment_home" />
 
+    <action
+        android:id="@+id/action_homeFragment_to_friendsFragment"
+        app:destination="@id/friendsFragment" />
+
     <fragment
         android:id="@+id/navigation_dashboard"
         android:name="com.davidwxcui.waterwise.ui.dashboard.DashboardFragment"
@@ -73,5 +77,18 @@
         app:destination="@id/add_fragment"
         app:popUpTo="@id/mobile_navigation"
         app:popUpToInclusive="false" />
+
+
+    <!-- Friends Page -->
+    <fragment
+        android:id="@+id/friendsFragment"
+        android:name="com.davidwxcui.waterwise.ui.friends.FriendsFragment"
+        android:label="Friends" />
+
+    <fragment
+        android:id="@+id/friendRequestsFragment"
+        android:name="com.davidwxcui.waterwise.ui.friends.FriendRequestsFragment"
+        android:label="Friend Requests" />
+
 
 </navigation>
