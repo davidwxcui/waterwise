@@ -174,6 +174,10 @@ class HomeFragment : Fragment() {
         binding.btnFriends.setOnClickListener {
             findNavController().navigate(R.id.friendsFragment)
         }
+
+        binding.btnRanking.setOnClickListener {
+            findNavController().navigate(R.id.navigation_user_ranking)
+        }
     }
 
     fun showFabQuickAdd() {

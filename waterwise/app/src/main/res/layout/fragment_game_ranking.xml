@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- 顶部标题 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/btnBackGameRanking"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="@android:color/transparent"
+                android:src="@android:drawable/ic_media_previous" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="Game Ranking"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_gameranking" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvGameRankingSubtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Top players by coins"
+            android:textSize="13sp"
+            android:textColor="#777777"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="12dp" />
+
+        <!-- 空状态 -->
+        <TextView
+            android:id="@+id/gameRankingEmpty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="No players yet"
+            android:textSize="13sp"
+            android:textColor="#999999"
+            android:visibility="gone" />
+
+        <!-- 排行列表 -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/gameRankingList"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:overScrollMode="never" />
+
+    </LinearLayout>
+
+</FrameLayout>

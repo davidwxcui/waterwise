@@ -19,6 +19,10 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlin.math.min
 import kotlin.random.Random
 
+import android.widget.ImageButton
+import com.davidwxcui.waterwise.minigame.GameRankingActivity
+private lateinit var btnGameRanking: ImageButton
+
 // ================== DATA MODELS ==================
 
 data class PlayerState(
@@ -169,6 +173,12 @@ class GameActivity : AppCompatActivity() {
             startActivity(intent)
             finish()
         }
+
+        btnGameRanking.setOnClickListener {
+
+            val intent = Intent(this, GameRankingActivity::class.java)
+            startActivity(intent)
+        }
     }
 
     private fun initViews() {
@@ -180,6 +190,8 @@ class GameActivity : AppCompatActivity() {
         boardGrid = findViewById(R.id.boardGrid)
         boardContainer = findViewById(R.id.boardContainer)
         diceImageView = findViewById(R.id.diceImageView)
+
+        btnGameRanking = findViewById(R.id.btnGameRanking)
     }
 
     // ---------------- BOARD ----------------

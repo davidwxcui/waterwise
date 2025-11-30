@@ -18,6 +18,10 @@
             android:name=".ui.onboarding.OnboardingActivity"
             android:exported="false"
             android:theme="@style/Theme.Waterwise" />
+
+        <activity
+            android:name=".minigame.GameRankingActivity"
+            android:exported="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true">
