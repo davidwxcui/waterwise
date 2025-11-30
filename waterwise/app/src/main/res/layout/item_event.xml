@@ -6,8 +6,7 @@
     android:layout_height="wrap_content"
     android:layout_marginVertical="8dp"
     android:clipToPadding="false"
-    android:clipChildren="false"
-    >
+    android:clipChildren="false">
 
     <!-- Delete Button (Hidden behind, revealed on swipe) -->
     <FrameLayout
@@ -54,7 +53,7 @@
         android:id="@+id/cardView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:cardCornerRadius="12dp"
+        app:cardCornerRadius="20dp"
         app:cardBackgroundColor="#FFFFFF"
         app:cardElevation="4dp"
         app:strokeColor="#E8E8E8"
@@ -67,70 +66,115 @@
             android:padding="16dp">
 
             <!-- Title and Days Badge -->
-            <FrameLayout
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp">
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="14dp">
 
                 <TextView
                     android:id="@+id/eventTitle"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:textSize="18sp"
+                    android:layout_weight="1"
+                    android:textSize="20sp"
                     android:textStyle="bold"
-                    android:textColor="#000000" />
+                    android:textColor="#000000"
+                    android:maxLines="2"
+                    android:ellipsize="end" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/daysUntil"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="end|center_vertical"
+                    android:layout_marginStart="12dp"
                     android:text="5 days"
                     android:textColor="#9C5DD4"
+                    android:textSize="14sp"
                     app:chipBackgroundColor="#F3E8FF"
                     app:chipStrokeWidth="0dp"
-                    app:chipCornerRadius="16dp" />
-            </FrameLayout>
+                    app:chipCornerRadius="24dp" />
+            </LinearLayout>
 
             <!-- Date -->
             <TextView
                 android:id="@+id/eventDate"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="14sp"
+                android:textSize="15sp"
                 android:textColor="#7D8BA3"
-                android:layout_marginBottom="12dp" />
+                android:layout_marginBottom="10dp"
+                android:textStyle="bold" />
 
             <!-- Description -->
             <TextView
                 android:id="@+id/eventDescription"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="14sp"
+                android:textSize="15sp"
                 android:textColor="#3D4456"
-                android:layout_marginBottom="12dp" />
+                android:layout_marginBottom="14dp"
+                android:lineSpacingMultiplier="1.3" />
 
-            <!-- Recommendation -->
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#E8E8E8"
+                android:layout_marginVertical="12dp" />
+
+            <!-- Recommendation Section -->
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:orientation="vertical"
+                android:layout_marginBottom="12dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="✦"
+                    android:text="💧 Hydration Tips"
                     android:textSize="14sp"
+                    android:textStyle="bold"
                     android:textColor="#9C5DD4"
-                    android:layout_marginEnd="8dp" />
+                    android:layout_marginBottom="8dp" />
 
                 <TextView
                     android:id="@+id/eventRecommendation"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textSize="13sp"
-                    android:textColor="#7D8BA3" />
+                    android:textSize="15sp"
+                    android:textColor="#3D4456"
+                    android:lineSpacingMultiplier="1.3" />
+            </LinearLayout>
+
+            <!-- Recommended Amount Section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/recommended_amount_bg"
+                android:padding="14dp"
+                android:layout_marginTop="10dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Recommended:"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:textColor="#9C5DD4"
+                    android:layout_marginEnd="12dp" />
+
+                <TextView
+                    android:id="@+id/eventRecommendedAmount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#1E88E5" />
             </LinearLayout>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>

@@ -9,14 +9,22 @@ enum class DrinkType(val displayName: String) {
     Milk("Milk"),
     Yogurt("Yogurt drinks"),
     Alcohol("Alcohol"),
-    Sparkling("Sparkling water")
+    Sparkling("Sparkling water");
+
+    companion object {
+        fun fromFirestore(raw: String?): DrinkType {
+            if (raw.isNullOrBlank()) return Water
+            val key = raw.trim()
+
+            entries.firstOrNull { it.name.equals(key, ignoreCase = true) }?.let { return it }
+
+            entries.firstOrNull { it.displayName.equals(key, ignoreCase = true) }?.let { return it }
+
+            return Water
+        }
+    }
 }
 
-/**
- * Firestore 需要：
- * 1. 所有字段有默认值
- * 2. data class 必须能无参构造
- */
 data class DrinkLog(
     val id: Int = 0,
     val type: DrinkType = DrinkType.Water,
@@ -24,5 +32,5 @@ data class DrinkLog(
     val effectiveMl: Int = 0,
     val note: String? = null,
     val timeMillis: Long = 0L,
-    val uid: String = ""     // Firestore 下必须知道属于谁
+    val uid: String = ""
 )

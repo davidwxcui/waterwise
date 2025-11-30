@@ -20,8 +20,6 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.roundToInt
-import android.content.Intent
-import com.davidwxcui.waterwise.minigame.GameActivity
 
 class HomeFragment : Fragment() {
 
@@ -169,10 +167,6 @@ class HomeFragment : Fragment() {
                 (s.sugaryRatio * 100).toInt()
             )
         }
-
-        binding.btnGame.setOnClickListener {
-            startActivity(Intent(requireContext(), GameActivity::class.java))
-        }
     }
 
     // FAB 调用：选择饮品类型
@@ -266,10 +260,4 @@ class HomeFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
-
-    override fun onResume() {
-        super.onResume()
-        vm.refreshListeners()   // ← 关键：重新挂监听 + 强制抓一次 drink logs
-    }
-
 }

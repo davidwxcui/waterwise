@@ -15,9 +15,11 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.davidwxcui.waterwise.R
 import com.davidwxcui.waterwise.databinding.FragmentEditProfileBinding
+import kotlinx.coroutines.launch
 import java.io.File
 
 class EditProfileFragment : Fragment() {
@@ -73,7 +75,6 @@ class EditProfileFragment : Fragment() {
             resources.getStringArray(R.array.activity_freq).indexOf(cur.activityFreqLabel).let { if (it>=0) it else 1 }
         )
 
-        // 名字变化时，若没有头像，用首字母
         binding.etName.doAfterTextChanged {
             if (selectedAvatarUri == null) {
                 val ch = it?.firstOrNull()?.uppercaseChar() ?: 'A'
@@ -81,7 +82,6 @@ class EditProfileFragment : Fragment() {
             }
         }
 
-        // 目标预览
         val recalc = {
             val w = binding.etWeight.text.toString().toIntOrNull() ?: cur.weightKg
             val a = binding.etAge.text.toString().toIntOrNull() ?: cur.age
@@ -141,9 +141,32 @@ class EditProfileFragment : Fragment() {
                 heightCm = height, weightKg = weight, activity = act,
                 activityFreqLabel = freq, avatarUri = selectedAvatarUri?.toString()
             )
+
+            // Save in local first，let Profile UI update
             ProfilePrefs.save(requireContext(), pf)
-            toast("Saved")
-            findNavController().popBackStack()
+
+            // Update Firestore（users/{uid}）
+            val uid = FirebaseAuthRepository.currentUid()
+            if (uid.isNullOrBlank()) {
+                toast("Saved locally (not logged in)")
+                findNavController().popBackStack()
+                return@setOnClickListener
+            }
+
+            binding.btnSave.isEnabled = false
+
+            lifecycleScope.launch {
+                val res = FirebaseAuthRepository.updateProfile(requireContext(), uid, pf)
+                binding.btnSave.isEnabled = true
+
+                if (res.isSuccess) {
+                    toast("Saved & synced")
+                    findNavController().popBackStack()
+                } else {
+                    toast(res.exceptionOrNull()?.message ?: "Sync failed, saved locally")
+                    findNavController().popBackStack()
+                }
+            }
         }
 
         // Cancel

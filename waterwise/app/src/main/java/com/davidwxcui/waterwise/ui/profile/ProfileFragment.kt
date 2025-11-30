@@ -57,6 +57,7 @@ class ProfileFragment : Fragment() {
         binding.btnLogout.isVisible = loggedIn
         binding.btnLogout.setOnClickListener {
             LocalAuthRepository.logout(requireContext())
+            FirebaseAuthRepository.logout()
             render(profileForUi())
             setupAuthButtons()
             Snackbar.make(binding.root, "Logged out", Snackbar.LENGTH_SHORT).show()

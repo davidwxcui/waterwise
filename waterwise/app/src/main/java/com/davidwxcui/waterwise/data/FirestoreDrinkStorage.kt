@@ -1,8 +1,15 @@
 package com.davidwxcui.waterwise.data
 
+import android.os.Build
 import android.util.Log
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.Query
+import kotlinx.coroutines.tasks.await
+import java.time.LocalDate
+import java.time.ZoneId
+import java.util.Calendar
 
 class FirestoreDrinkStorage {
 
@@ -14,16 +21,120 @@ class FirestoreDrinkStorage {
     private fun drinkLogsCol(uid: String) =
         userDoc(uid).collection("drinkLogs")
 
-    /**
-     * List DrinkLogs（by timeMillis decreasing）
-     */
+
+    private fun getLongSafe(v: Any?): Long {
+        return when (v) {
+            is Number -> v.toLong()
+            is Timestamp -> v.toDate().time
+            is String -> v.toLongOrNull() ?: 0L
+            else -> 0L
+        }
+    }
+
+
+    private fun parseDrinkTypeSafe(raw: String): DrinkType? {
+        val key = raw.trim().uppercase()
+
+        return when (key) {
+            "WATER" -> DrinkType.Water
+            "TEA" -> DrinkType.Tea
+            "COFFEE" -> DrinkType.Coffee
+            "JUICE" -> DrinkType.Juice
+            "SODA" -> DrinkType.Soda
+            "MILK" -> DrinkType.Milk
+            "YOGURT" -> DrinkType.Yogurt
+            "ALCOHOL" -> DrinkType.Alcohol
+            "SPARKLING" -> DrinkType.Sparkling
+
+            // 兼容旧命名/别名（防止你以前存过别的）
+            "SPARKLING_WATER", "SPARKLINGWATER", "CARBONATED" -> DrinkType.Sparkling
+            "SOFTDRINK", "POP" -> DrinkType.Soda
+
+            else -> {
+                Log.e("FirestoreDrinkStorage", "Unknown drink type in Firestore: '$raw'")
+                null
+            }
+        }
+    }
+
+
+    private fun todayRangeMillis(): Pair<Long, Long> {
+        return if (Build.VERSION.SDK_INT >= 26) {
+            val zone = ZoneId.systemDefault()
+            val start = LocalDate.now()
+                .atStartOfDay(zone)
+                .toInstant()
+                .toEpochMilli()
+            val end = LocalDate.now()
+                .plusDays(1)
+                .atStartOfDay(zone)
+                .toInstant()
+                .toEpochMilli()
+            start to end
+        } else {
+            val cal = Calendar.getInstance()
+            cal.set(Calendar.HOUR_OF_DAY, 0)
+            cal.set(Calendar.MINUTE, 0)
+            cal.set(Calendar.SECOND, 0)
+            cal.set(Calendar.MILLISECOND, 0)
+            val start = cal.timeInMillis
+            cal.add(Calendar.DAY_OF_YEAR, 1)
+            val end = cal.timeInMillis
+            start to end
+        }
+    }
+
+
+    suspend fun fetchDrinkLogsOnce(uid: String): List<DrinkLog> {
+        val (start, end) = todayRangeMillis()
+
+        val snap = drinkLogsCol(uid)
+            .whereGreaterThanOrEqualTo("timeMillis", start)
+            .whereLessThan("timeMillis", end)
+            .orderBy("timeMillis", Query.Direction.DESCENDING)
+            .get()
+            .await()
+
+        val list = snap.documents.mapNotNull { doc ->
+            try {
+                val typeStrRaw = doc.getString("type") ?: return@mapNotNull null
+                val type = parseDrinkTypeSafe(typeStrRaw) ?: return@mapNotNull null
+
+                val id = getLongSafe(doc.get("id")).toInt()
+                val volumeMl = getLongSafe(doc.get("volumeMl")).toInt()
+                val effectiveMl = getLongSafe(doc.get("effectiveMl")).toInt()
+                val note = doc.getString("note")
+                val timeMillis = getLongSafe(doc.get("timeMillis"))
+
+                DrinkLog(
+                    id = id,
+                    type = type,
+                    volumeMl = volumeMl,
+                    effectiveMl = effectiveMl,
+                    note = note,
+                    timeMillis = timeMillis
+                )
+            } catch (e: Exception) {
+                Log.e("FirestoreDrinkStorage", "fetch parse error: ${e.message}")
+                null
+            }
+        }
+
+        return list
+    }
+
+
     fun listenDrinkLogs(
         uid: String,
         onUpdate: (List<DrinkLog>) -> Unit,
         onError: (Exception) -> Unit = {}
     ): ListenerRegistration {
+        val (start, end) = todayRangeMillis()
+
         return drinkLogsCol(uid)
-            .orderBy("timeMillis", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .whereGreaterThanOrEqualTo("timeMillis", start)
+            .whereLessThan("timeMillis", end)
+            .orderBy("timeMillis", Query.Direction.DESCENDING)
             .addSnapshotListener { snap, err ->
                 if (err != null) {
                     onError(err)
@@ -36,13 +147,14 @@ class FirestoreDrinkStorage {
 
                 val list = snap.documents.mapNotNull { doc ->
                     try {
-                        val typeStr = doc.getString("type") ?: return@mapNotNull null
-                        val type = DrinkType.valueOf(typeStr)
-                        val id = (doc.getLong("id") ?: 0L).toInt()
-                        val volumeMl = (doc.getLong("volumeMl") ?: 0L).toInt()
-                        val effectiveMl = (doc.getLong("effectiveMl") ?: 0L).toInt()
+                        val typeStrRaw = doc.getString("type") ?: return@mapNotNull null
+                        val type = parseDrinkTypeSafe(typeStrRaw) ?: return@mapNotNull null
+
+                        val id = getLongSafe(doc.get("id")).toInt()
+                        val volumeMl = getLongSafe(doc.get("volumeMl")).toInt()
+                        val effectiveMl = getLongSafe(doc.get("effectiveMl")).toInt()
                         val note = doc.getString("note")
-                        val timeMillis = doc.getLong("timeMillis") ?: 0L
+                        val timeMillis = getLongSafe(doc.get("timeMillis"))
 
                         DrinkLog(
                             id = id,
@@ -91,7 +203,7 @@ class FirestoreDrinkStorage {
     }
 
     /**
-     * update  volume
+     * update volume
      */
     fun updateDrinkLog(uid: String, log: DrinkLog, onDone: (() -> Unit)? = null) {
         val docId = "${uid}_${log.timeMillis}_${log.id}"

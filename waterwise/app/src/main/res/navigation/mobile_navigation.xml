@@ -11,11 +11,20 @@
         android:label="@string/title_home"
         tools:layout="@layout/fragment_home" />
 
+    <action
+        android:id="@+id/action_homeFragment_to_friendsFragment"
+        app:destination="@id/friendsFragment" />
+
     <fragment
         android:id="@+id/navigation_dashboard"
         android:name="com.davidwxcui.waterwise.ui.dashboard.DashboardFragment"
         android:label="@string/title_dashboard"
         tools:layout="@layout/fragment_dashboard" />
+
+    <fragment
+        android:id="@+id/add_fragment"
+        android:name="com.davidwxcui.waterwise.ui.add.AddFragment"
+        android:label="Add" />
 
     <fragment
         android:id="@+id/navigation_notifications"
@@ -37,7 +46,6 @@
             android:id="@+id/action_profile_to_edit"
             app:destination="@id/navigation_edit_profile" />
     </fragment>
-
 
     <fragment
         android:id="@+id/navigation_login"
@@ -62,4 +70,25 @@
         android:name="com.davidwxcui.waterwise.ui.profile.EditProfileFragment"
         android:label="Edit Profile"
         tools:layout="@layout/fragment_edit_profile" />
+
+    <!-- Global action accessible from any fragment -->
+    <action
+        android:id="@+id/action_global_to_add"
+        app:destination="@id/add_fragment"
+        app:popUpTo="@id/mobile_navigation"
+        app:popUpToInclusive="false" />
+
+
+    <!-- Friends Page -->
+    <fragment
+        android:id="@+id/friendsFragment"
+        android:name="com.davidwxcui.waterwise.ui.friends.FriendsFragment"
+        android:label="Friends" />
+
+    <fragment
+        android:id="@+id/friendRequestsFragment"
+        android:name="com.davidwxcui.waterwise.ui.friends.FriendRequestsFragment"
+        android:label="Friend Requests" />
+
+
 </navigation>

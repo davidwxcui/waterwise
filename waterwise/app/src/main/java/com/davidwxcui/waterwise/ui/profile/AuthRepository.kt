@@ -1,12 +1,19 @@
 package com.davidwxcui.waterwise.ui.profile
 
 import android.content.Context
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import java.security.MessageDigest
 import java.util.UUID
+import java.util.UUID.randomUUID
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 
 /**
  * Auth API placeholder.
- * Replace LocalAuthRepository with your real backend later.
  */
 interface AuthApi {
     suspend fun register(ctx: Context, name: String, email: String, password: String): Result<AuthUser>
@@ -17,7 +24,159 @@ interface AuthApi {
 data class AuthUser(val uid: String, val token: String)
 
 /**
- * Local auth implementation (SharedPreferences as a fake DB).
+ * Firebase auth implementation
+ */
+object FirebaseAuthRepository : AuthApi {
+
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
+
+    override suspend fun register(
+        ctx: Context,
+        name: String,
+        email: String,
+        password: String
+    ): Result<AuthUser> {
+        return try {
+            val user = createUser(email, password)
+            val uid = user.uid
+            val token = user.fetchIdToken(false)
+
+            val local = ProfilePrefs.load(ctx).copy(name = name, email = email)
+            ProfilePrefs.save(ctx, local)
+
+            upsertUserProfile(uid, local)
+
+            Result.success(AuthUser(uid, token))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun login(
+        ctx: Context,
+        email: String,
+        password: String
+    ): Result<AuthUser> {
+        return try {
+            val user = signIn(email, password)
+            val uid = user.uid
+            val token = user.fetchIdToken(false)
+
+            // Make sure Firestore has user file
+            val local = ProfilePrefs.load(ctx).copy(email = email)
+            ProfilePrefs.save(ctx, local)
+            upsertUserProfile(uid, local)
+
+            Result.success(AuthUser(uid, token))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun updateProfile(
+        ctx: Context,
+        uid: String,
+        profile: Profile
+    ): Result<Unit> {
+        return try {
+            // local copy
+            ProfilePrefs.save(ctx, profile)
+
+            // Firestore update
+            upsertUserProfile(uid, profile)
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    fun currentUid(): String? = auth.currentUser?.uid
+
+    fun isLoggedIn(): Boolean = auth.currentUser != null
+
+    fun logout() {
+        auth.signOut()
+    }
+
+    // ---------- Firestore helpers ----------
+    private suspend fun upsertUserProfile(uid: String, pf: Profile) {
+        val data = hashMapOf(
+            "uid" to uid,
+            "name" to pf.name,
+            "email" to pf.email,
+            "age" to pf.age,
+            "sex" to pf.sex.name,
+            "heightCm" to pf.heightCm,
+            "weightKg" to pf.weightKg,
+            "activityLevel" to pf.activity.name,
+            "activityFreqLabel" to pf.activityFreqLabel,
+            "avatarUri" to pf.avatarUri
+        )
+
+        suspendCoroutine<Unit> { cont ->
+            db.collection("users").document(uid)
+                .set(data, SetOptions.merge())
+                .addOnSuccessListener { cont.resume(Unit) }
+                .addOnFailureListener { e -> cont.resumeWithException(e) }
+        }
+    }
+
+    suspend fun fetchActiveRoomId(uid: String): String? {
+        return suspendCoroutine { cont ->
+            db.collection("users").document(uid)
+                .get()
+                .addOnSuccessListener { snap ->
+                    cont.resume(snap.getString("activeRoomId"))
+                }
+                .addOnFailureListener { e ->
+                    cont.resumeWithException(e)
+                }
+        }
+    }
+
+    // ---------- Firebase Auth suspend wrappers ----------
+
+    private suspend fun createUser(email: String, password: String): FirebaseUser {
+        return suspendCoroutine { cont ->
+            auth.createUserWithEmailAndPassword(email, password)
+                .addOnSuccessListener { res ->
+                    val u = res.user
+                    if (u != null) cont.resume(u)
+                    else cont.resumeWithException(Exception("Firebase user is null"))
+                }
+                .addOnFailureListener { e -> cont.resumeWithException(e) }
+        }
+    }
+
+    private suspend fun signIn(email: String, password: String): FirebaseUser {
+        return suspendCoroutine { cont ->
+            auth.signInWithEmailAndPassword(email, password)
+                .addOnSuccessListener { res ->
+                    val u = res.user
+                    if (u != null) cont.resume(u)
+                    else cont.resumeWithException(Exception("Firebase user is null"))
+                }
+                .addOnFailureListener { e -> cont.resumeWithException(e) }
+        }
+    }
+
+    private suspend fun FirebaseUser.fetchIdToken(forceRefresh: Boolean): String {
+        return suspendCoroutine { cont ->
+            this.getIdToken(forceRefresh)
+                .addOnSuccessListener { r ->
+                    val t = r.token
+                    if (t != null) cont.resume(t)
+                    else cont.resumeWithException(Exception("Token is null"))
+                }
+                .addOnFailureListener { e -> cont.resumeWithException(e) }
+        }
+    }
+}
+
+/**
+ * Local auth implementation
  */
 object LocalAuthRepository : AuthApi {
 
@@ -41,7 +200,7 @@ object LocalAuthRepository : AuthApi {
             return Result.failure(Exception("Account already exists"))
         }
 
-        val uid = UUID.randomUUID().toString().replace("-", "").take(10)
+        val uid = randomUUID().toString().replace("-", "").take(10)
         val hash = sha256(password)
         val token = "local_token_$uid"
 
