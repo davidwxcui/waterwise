@@ -30,13 +30,38 @@
                 android:layout_weight="1"
                 android:orientation="vertical">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <!-- Titles and leaderboard buttons -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Hello, Alex!"
-                    android:textSize="28sp"
-                    android:textStyle="bold"
-                    android:textColor="@android:color/black" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Hello, Alex!"
+                        android:textSize="28sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/black" />
+
+                    <ImageButton
+                        android:id="@+id/btnRanking"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_marginStart="12dp"
+                        android:layout_marginTop="12dp"
+                        android:background="@drawable/circle_background"
+                        android:clickable="true"
+                        android:contentDescription="Ranking"
+                        android:focusable="true"
+                        android:padding="5dp"
+                        android:scaleType="centerInside"
+                        android:src="@drawable/ic_leaderboard" />
+
+
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/topTitle"
@@ -47,6 +72,7 @@
                     android:textColor="#999999"
                     android:layout_marginTop="4dp" />
             </LinearLayout>
+
 
             <!-- Notification bell on the right -->
             <LinearLayout
