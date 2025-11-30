@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Top status bar -->
+    <!-- 顶部状态栏：金币 + 骰子剩余 -->
     <LinearLayout
         android:orientation="horizontal"
         android:layout_width="match_parent"
@@ -32,7 +32,7 @@
             android:textSize="18sp" />
     </LinearLayout>
 
-    <!-- Board + centered dice -->
+    <!-- 棋盘 + 骰子 + ⭐排行榜按钮(右上角悬浮) -->
     <FrameLayout
         android:id="@+id/boardContainer"
         android:layout_width="match_parent"
@@ -41,7 +41,7 @@
         android:layout_marginTop="16dp"
         android:layout_marginBottom="16dp">
 
-        <!-- 8x5 board (size decided in code) -->
+        <!-- 8x5 棋盘（大小在代码里重新设置） -->
         <GridLayout
             android:id="@+id/boardGrid"
             android:layout_width="wrap_content"
@@ -52,7 +52,7 @@
             android:alignmentMode="alignMargins"
             android:useDefaultMargins="true" />
 
-        <!-- Center dice -->
+        <!-- 中间的骰子 -->
         <ImageView
             android:id="@+id/diceImageView"
             android:layout_width="96dp"
@@ -60,9 +60,21 @@
             android:layout_gravity="center"
             android:scaleType="centerInside"
             android:src="@drawable/dice_1" />
+
+        <!-- ⭐ 新增：游戏排行榜按钮，悬浮在右上角 -->
+        <ImageButton
+            android:id="@+id/btnGameRanking"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="top|end"
+            android:layout_margin="8dp"
+            android:src="@drawable/ic_gameranking"
+            android:background="@android:color/transparent"
+            android:contentDescription="Game Ranking"
+            android:padding="4dp" />
     </FrameLayout>
 
-    <!-- Event text -->
+    <!-- 事件提示 -->
     <TextView
         android:id="@+id/tvEvent"
         android:layout_width="match_parent"
@@ -71,14 +83,14 @@
         android:textSize="16sp"
         android:layout_marginBottom="12dp" />
 
-    <!-- Roll button -->
+    <!-- 掷骰子按钮 -->
     <Button
         android:id="@+id/btnRollDice"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Roll Dice" />
 
-    <!-- TEMP: add 1000 dice button -->
+    <!-- 返回按钮 -->
     <Button
         android:id="@+id/btnAddDice"
         android:layout_width="match_parent"
@@ -87,4 +99,3 @@
         android:layout_marginTop="8dp" />
 
 </LinearLayout>
-

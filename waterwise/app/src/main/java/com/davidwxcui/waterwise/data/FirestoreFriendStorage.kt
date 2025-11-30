@@ -215,6 +215,30 @@ class FirestoreFriendStorage {
         }
     }
 
+    /**
+     * 一次性获取当前用户的好友列表（不是实时监听）
+     */
+    suspend fun fetchFriendsOnce(uid: String): List<Friend> {
+        return try {
+            val snap = friendsCol(uid)
+                .orderBy("since", Query.Direction.ASCENDING)
+                .get()
+                .await()
+
+            snap.documents.mapNotNull { d ->
+                val fid = d.getString("uid") ?: return@mapNotNull null
+                Friend(
+                    uid = fid,
+                    name = d.getString("name") ?: "",
+                    avatarUri = d.getString("avatarUri"),
+                    since = d.getLong("since") ?: 0L
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("FirestoreFriendStorage", "fetchFriendsOnce failed: ${e.message}", e)
+            emptyList()
+        }
+    }
 
     suspend fun declineFriendRequest(myUid: String, fromUid: String): Result<Unit> {
         return try {
