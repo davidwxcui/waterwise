@@ -11,6 +11,7 @@ import java.util.UUID.randomUUID
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+import kotlinx.coroutines.tasks.await
 
 /**
  * Auth API placeholder.
@@ -100,10 +101,74 @@ object FirebaseAuthRepository : AuthApi {
         auth.signOut()
     }
 
+    // Give user 10 bits numeric ID
+    private suspend fun ensureNumericUid(uid: String): String {
+        return db.runTransaction { tx ->
+            val userRef = db.collection("users").document(uid)
+            val userSnap = tx.get(userRef)
+            val existing = userSnap.getString("numericUid")
+            if (!existing.isNullOrBlank()) {
+                return@runTransaction existing
+            }
+
+            val poolRef = db.collection("meta").document("numericUidPool")
+            val poolSnap = tx.get(poolRef)
+
+            val lastMax = poolSnap.getLong("lastMax") ?: 1_000_000_000L
+
+            val rawList = poolSnap.get("available") as? List<*>
+            val available = rawList?.mapNotNull {
+                when (it) {
+                    is Number -> it.toLong()
+                    is String -> it.toLongOrNull()
+                    else -> null
+                }
+            }?.toMutableList() ?: mutableListOf()
+
+            val assigned: Long
+            val newLastMax: Long
+            val newAvailable: List<Long>
+
+            if (available.isEmpty()) {
+                val newStart = lastMax + 1L
+                val newEnd = lastMax + 100L
+
+                assigned = newStart
+                newLastMax = newEnd
+                newAvailable = (newStart + 1L..newEnd).toList()
+            } else {
+                assigned = available.first()
+                available.removeAt(0)
+                newLastMax = lastMax
+                newAvailable = available
+            }
+
+            tx.set(
+                poolRef,
+                mapOf(
+                    "lastMax" to newLastMax,
+                    "available" to newAvailable
+                ),
+                SetOptions.merge()
+            )
+
+            tx.set(
+                userRef,
+                mapOf("numericUid" to assigned.toString()),
+                SetOptions.merge()
+            )
+
+            assigned.toString()
+        }.await()
+    }
+
     // ---------- Firestore helpers ----------
     private suspend fun upsertUserProfile(uid: String, pf: Profile) {
+        val numericUid = ensureNumericUid(uid)
+
         val data = hashMapOf(
             "uid" to uid,
+            "numericUid" to numericUid,
             "name" to pf.name,
             "email" to pf.email,
             "age" to pf.age,
@@ -115,12 +180,9 @@ object FirebaseAuthRepository : AuthApi {
             "avatarUri" to pf.avatarUri
         )
 
-        suspendCoroutine<Unit> { cont ->
-            db.collection("users").document(uid)
-                .set(data, SetOptions.merge())
-                .addOnSuccessListener { cont.resume(Unit) }
-                .addOnFailureListener { e -> cont.resumeWithException(e) }
-        }
+        db.collection("users").document(uid)
+            .set(data, SetOptions.merge())
+            .await()
     }
 
     suspend fun fetchActiveRoomId(uid: String): String? {
