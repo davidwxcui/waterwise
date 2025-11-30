@@ -143,11 +143,13 @@ class HomeFragment : Fragment() {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = timelineAdapter
         }
+
         vm.timeline.observe(viewLifecycleOwner) { list ->
+            val ordered = list.sortedByDescending { it.timeMillis }
             val top5: List<DrinkLog> =
-                if (list.size > 5) list.subList(0, 5) else list
+                if (ordered.size > 5) ordered.subList(0, 5) else ordered
             timelineAdapter.submitList(top5)
-            binding.timelineEmpty.isVisible = list.isEmpty()
+            binding.timelineEmpty.isVisible = ordered.isEmpty()
         }
 
         vm.summary.observe(viewLifecycleOwner) { s ->
