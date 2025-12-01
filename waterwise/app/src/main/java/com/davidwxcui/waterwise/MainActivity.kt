@@ -8,6 +8,7 @@ import androidx.navigation.ui.setupWithNavController
 import com.davidwxcui.waterwise.data.OnboardingPreferences
 import com.davidwxcui.waterwise.databinding.ActivityMainBinding
 import com.davidwxcui.waterwise.ui.onboarding.OnboardingActivity
+import com.davidwxcui.waterwise.ui.profile.FirebaseAuthRepository
 
 class MainActivity : AppCompatActivity() {
 
@@ -16,8 +17,12 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Check if user is logged in AND onboarding is not completed
         val onboardingPrefs = OnboardingPreferences(this)
-        if (!onboardingPrefs.isOnboardingCompleted()) {
+        val isLoggedIn = FirebaseAuthRepository.isLoggedIn()
+
+        if (isLoggedIn && !onboardingPrefs.isOnboardingCompleted()) {
+            // User is logged in but hasn't completed onboarding
             startActivity(Intent(this, OnboardingActivity::class.java))
             finish()
             return
