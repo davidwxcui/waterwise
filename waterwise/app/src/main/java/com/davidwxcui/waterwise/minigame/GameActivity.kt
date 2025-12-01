@@ -5,9 +5,12 @@ import android.animation.AnimatorListenerAdapter
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.Gravity
+import android.view.Menu
+import android.view.MenuItem
 import android.widget.*
 import android.widget.LinearLayout
 import androidx.appcompat.app.AlertDialog
@@ -15,25 +18,22 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.davidwxcui.waterwise.MainActivity
 import com.davidwxcui.waterwise.R
-import com.davidwxcui.waterwise.data.FirestoreDrinkStorage
-import com.google.firebase.FirebaseApp
-import com.google.firebase.auth.FirebaseAuth
+import com.davidwxcui.waterwise.data.FirestoreRoomStorage
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlin.math.min
-import kotlin.random.Random
-import android.widget.ImageButton
-import kotlinx.coroutines.launch
+import com.google.firebase.firestore.SetOptions
+import kotlinx.coroutines.*
 import kotlinx.coroutines.tasks.await
-import java.util.Calendar
+import kotlin.random.Random
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 
 // ================== DATA MODELS ==================
 
 data class PlayerState(
-    val coins: Int = 0,          // 初始金币：现在从 0 开始
+    val coins: Int = 10000,
     val position: Int = 0,
-    val diceLeft: Int = 0,       // 初始骰子：0，靠喝水解锁
-    val ownedProperties: List<String> = emptyList(),
-    val diceUsedToday: Int = 0
+    val diceLeft: Int = 0,
+    val ownedProperties: List<String> = emptyList()
 )
 
 data class EventChoice(
@@ -63,30 +63,64 @@ data class PropertyInfo(
     val incomePerTurn: Int
 )
 
+/** For drawing all players on the board with different colors */
+data class PlayerMarker(
+    val uid: String,
+    val name: String,
+    val position: Int,
+    val color: Int,
+    val colorName: String
+)
+
 // ================== ACTIVITY ==================
 
 class GameActivity : AppCompatActivity() {
 
     companion object {
         private const val TOTAL_TILES = 22
-        private const val COLLECTION_NAME = "games"
+
+        // Firestore structure: rooms/<roomId>/members/<uid>
+        private const val ROOMS_COLLECTION = "rooms"
+        private const val MEMBERS_SUBCOLLECTION = "members"
+
+        const val EXTRA_ROOM_ID = "roomId"
     }
 
-    private lateinit var btnGameRanking: ImageView
+    // At most 5 players in one room, each one has a color
+    private val PLAYER_COLORS = listOf(
+        0xFFFF4444.toInt(), // Red
+        0xFF33B5E5.toInt(), // Blue
+        0xFF99CC00.toInt(), // Green
+        0xFFFFBB33.toInt(), // Yellow/Orange
+        0xFFAA66CC.toInt()  // Purple
+    )
 
-    // 8x5 outer ring positions, 22 tiles, clockwise
+    private val PLAYER_COLOR_NAMES = listOf(
+        "Red",
+        "Blue",
+        "Green",
+        "Yellow",
+        "Purple"
+    )
+
+    private val PLAYER_COLOR_ICONS = listOf(
+        R.drawable.ic_player_red,
+        R.drawable.ic_player_blue,
+        R.drawable.ic_player_green,
+        R.drawable.ic_player_yellow,
+        R.drawable.ic_player_purple
+    )
+
+
+    // 8x5 outer ring with 22 tiles
     private val tilePositions = listOf(
-        // Top row (5)
         0 to 0, 0 to 1, 0 to 2, 0 to 3, 0 to 4,
-        // Right column (7)
         1 to 4, 2 to 4, 3 to 4, 4 to 4, 5 to 4, 6 to 4, 7 to 4,
-        // Bottom row (4)
         7 to 3, 7 to 2, 7 to 1, 7 to 0,
-        // Left column (6)
         6 to 0, 5 to 0, 4 to 0, 3 to 0, 2 to 0, 1 to 0
     )
 
-    // 7 properties
+    // Property configuration
     private val allProperties = listOf(
         PropertyInfo("coffee", "Coffee Shop", price = 40000, incomePerTurn = 3000),
         PropertyInfo("book", "Book Store", price = 60000, incomePerTurn = 4000),
@@ -97,11 +131,18 @@ class GameActivity : AppCompatActivity() {
         PropertyInfo("bank", "Bank", price = 200000, incomePerTurn = 15000)
     )
 
-    // propertyId -> tileIndex / tileIndex -> propertyId
+    // propertyId -> tileIndex
     private val propertyIdToTile = mutableMapOf<String, Int>()
+    // tileIndex -> propertyId
     private val tileToPropertyId = mutableMapOf<Int, String>()
+    // propertyId -> ownerUid
+    private val propertyOwners = mutableMapOf<String, String>()
+    // ownerUid -> name cache
+    private val ownerNameCache = mutableMapOf<String, String>()
+    // all players with their position and color
+    private val playerMarkers = mutableListOf<PlayerMarker>()
 
-    // propertyId -> icon drawable
+    // Property icons
     private val propertyIdToIconRes = mapOf(
         "coffee" to R.drawable.ic_property_coffee,
         "book" to R.drawable.ic_property_book,
@@ -111,12 +152,17 @@ class GameActivity : AppCompatActivity() {
         "mall" to R.drawable.ic_property_mall,
         "bank" to R.drawable.ic_property_bank
     )
+    // Random event tile icon
     private val randomTileIconRes = R.drawable.ic_tile_random
 
-    // Dice faces
+    // Dice images
     private val diceDrawables = intArrayOf(
-        R.drawable.dice_1, R.drawable.dice_2, R.drawable.dice_3,
-        R.drawable.dice_4, R.drawable.dice_5, R.drawable.dice_6
+        R.drawable.dice_1,
+        R.drawable.dice_2,
+        R.drawable.dice_3,
+        R.drawable.dice_4,
+        R.drawable.dice_5,
+        R.drawable.dice_6
     )
 
     // Views
@@ -124,39 +170,52 @@ class GameActivity : AppCompatActivity() {
     private lateinit var tvDiceLeft: TextView
     private lateinit var tvEvent: TextView
     private lateinit var btnRollDice: Button
-    private lateinit var btnAddDice: Button   // Back button
     private lateinit var boardGrid: GridLayout
     private lateinit var boardContainer: FrameLayout
     private lateinit var diceImageView: ImageView
 
     private val firestore: FirebaseFirestore by lazy { FirebaseFirestore.getInstance() }
-    private val drinkStorage by lazy { FirestoreDrinkStorage() }
+    private val roomStorage by lazy { FirestoreRoomStorage() }
 
+    private lateinit var roomId: String
+    private lateinit var uid: String
     private var playerState = PlayerState()
 
-    // Board tiles
     private val tileContainers = mutableListOf<LinearLayout>()
     private val tileIconViews = mutableListOf<ImageView>()
     private val tileEvents = mutableMapOf<Int, TileEventTemplate>()
 
+    // ---------- Lifecycle ----------
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        FirebaseApp.initializeApp(this)
-        supportActionBar?.hide()
-
         setContentView(R.layout.activity_game)
+
+        roomId = intent.getStringExtra(EXTRA_ROOM_ID) ?: ""
+        if (roomId.isEmpty()) {
+            Toast.makeText(this, "Room ID not provided!", Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
+
+        uid = loadUidFromLocal() ?: run {
+            Toast.makeText(this, "UID not found, please login first.", Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
+
         initViews()
 
-        // Layout board & dice after container measured
+        // Use width only to compute board size, to avoid height=0 problem inside NestedScrollView
         boardContainer.post {
             val w = boardContainer.width
-            val h = boardContainer.height
-            val cell = min(w / 5, h / 8)
+            if (w <= 0) return@post
+
+            val cell = w / 5 // 5 columns
 
             val boardParams = boardGrid.layoutParams as FrameLayout.LayoutParams
             boardParams.width = cell * 5
-            boardParams.height = cell * 8
+            boardParams.height = cell * 8 // 8 rows
             boardParams.gravity = Gravity.CENTER
             boardGrid.layoutParams = boardParams
 
@@ -169,21 +228,17 @@ class GameActivity : AppCompatActivity() {
 
         initBoard()
         initTileEvents()
-        loadPlayerStateFromFirebase()
+
+        lifecycleScope.launch {
+            loadPlayerAndRoomState()
+        }
 
         btnRollDice.setOnClickListener { onRollDice() }
+    }
 
-        // Back to main page
-        btnAddDice.setOnClickListener {
-            val intent = Intent(this, MainActivity::class.java)
-            startActivity(intent)
-            finish()
-        }
-
-        btnGameRanking.setOnClickListener {
-            val intent = Intent(this, GameRankingActivity::class.java)
-            startActivity(intent)
-        }
+    private fun loadUidFromLocal(): String? {
+        val sp = getSharedPreferences("profile", Context.MODE_PRIVATE)
+        return sp.getString("uid", null)
     }
 
     private fun initViews() {
@@ -191,14 +246,224 @@ class GameActivity : AppCompatActivity() {
         tvDiceLeft = findViewById(R.id.tvDiceLeft)
         tvEvent = findViewById(R.id.tvEvent)
         btnRollDice = findViewById(R.id.btnRollDice)
-        btnAddDice = findViewById(R.id.btnAddDice)
         boardGrid = findViewById(R.id.boardGrid)
         boardContainer = findViewById(R.id.boardContainer)
         diceImageView = findViewById(R.id.diceImageView)
-        btnGameRanking = findViewById(R.id.btnGameRanking)
     }
 
-    // ---------------- BOARD ----------------
+    // ---------- Top-right menu ----------
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_game, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.menu_room_id -> {
+                showRoomIdDialog(); true
+            }
+            R.id.menu_members -> {
+                showRoomMembersDialog(); true
+            }
+            R.id.menu_leave_room -> {
+                promptLeaveRoom(); true
+            }
+            R.id.menu_home -> {
+                goHome(); true
+            }
+            R.id.menu_player_colors -> {
+                showPlayerColorsDialog(); true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    private fun showRoomIdDialog() {
+        val msg = "Room ID:\n$roomId"
+        showGameMessageDialog(
+            iconRes = R.drawable.ic_dice,
+            title = "Room ID",
+            message = msg
+        )
+    }
+
+
+    /** Show list of members (names only, no colors) */
+    private fun showRoomMembersDialog() {
+        lifecycleScope.launch {
+            try {
+                val membersRef = firestore.collection(ROOMS_COLLECTION)
+                    .document(roomId)
+                    .collection(MEMBERS_SUBCOLLECTION)
+
+                val snapshot = membersRef.get().await()
+                if (snapshot.isEmpty) {
+                    showGameMessageDialog(
+                        iconRes = R.drawable.ic_dice,
+                        title = "Room Members",
+                        message = "No players in this room."
+                    )
+                    return@launch
+                }
+
+                val names = snapshot.documents.map { playerDoc ->
+                    val memberUid = playerDoc.id
+                    try {
+                        val userSnap = firestore.collection("users")
+                            .document(memberUid)
+                            .get()
+                            .await()
+                        userSnap.getString("name") ?: memberUid
+                    } catch (e: Exception) {
+                        memberUid
+                    }
+                }.sorted()
+
+                val msg = names.joinToString("\n")
+
+                showGameMessageDialog(
+                    iconRes = R.drawable.ic_dice,
+                    title = "Room Members",
+                    message = msg
+                )
+            } catch (e: Exception) {
+                showGameMessageDialog(
+                    iconRes = R.drawable.ic_dice,
+                    title = "Room Members",
+                    message = "Failed to load members: ${e.message}"
+                )
+            }
+        }
+    }
+
+    /** Show mapping: player -> color name */
+    private fun showPlayerColorsDialog() {
+        lifecycleScope.launch {
+            if (playerMarkers.isEmpty()) {
+                refreshPlayerMarkers()
+            }
+
+            val dialogView = layoutInflater.inflate(R.layout.dialog_player_colors, null)
+            val container = dialogView.findViewById<LinearLayout>(R.id.containerPlayerColors)
+            val btnOk = dialogView.findViewById<Button>(R.id.btnPlayerColorOk)
+
+            if (playerMarkers.isEmpty()) {
+                val tv = TextView(this@GameActivity).apply {
+                    text = "No players in this room."
+                    setTextColor(0xFFFFFFFF.toInt())
+                    textSize = 14f
+                }
+                container.addView(tv)
+            } else {
+                val density = resources.displayMetrics.density
+                val verticalPadding = (8 * density).toInt()
+                val iconSize = (20 * density).toInt()
+                val textMarginStart = (8 * density).toInt()
+
+                playerMarkers.forEach { marker ->
+                    val idx = PLAYER_COLOR_NAMES.indexOf(marker.colorName)
+                    val iconRes = if (idx in PLAYER_COLOR_ICONS.indices) {
+                        PLAYER_COLOR_ICONS[idx]
+                    } else {
+                        R.drawable.ic_dice
+                    }
+
+                    val row = LinearLayout(this@GameActivity).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding(0, verticalPadding, 0, verticalPadding)
+                    }
+
+                    val iv = ImageView(this@GameActivity).apply {
+                        layoutParams = LinearLayout.LayoutParams(iconSize, iconSize)
+                        setImageResource(iconRes)
+                    }
+
+                    val tv = TextView(this@GameActivity).apply {
+                        layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        ).also { lp ->
+                            lp.marginStart = textMarginStart
+                        }
+                        text = "${marker.name}: ${marker.colorName}"
+                        setTextColor(0xFFFFFFFF.toInt())
+                        textSize = 14f
+                    }
+
+                    row.addView(iv)
+                    row.addView(tv)
+                    container.addView(row)
+                }
+            }
+
+            val dialog = AlertDialog.Builder(this@GameActivity)
+                .setView(dialogView)
+                .setCancelable(true)
+                .create()
+
+            btnOk.setOnClickListener { dialog.dismiss() }
+
+            dialog.show()
+            dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+        }
+    }
+
+
+
+    private fun promptLeaveRoom() {
+        showGameConfirmDialog(
+            iconRes = R.drawable.ic_dice,
+            title = "Leave Room",
+            message = "Are you sure you want to leave this room?",
+            positiveText = "Leave",
+            negativeText = "Cancel"
+        ) {
+            // 点击 Leave 后执行
+            leaveRoomFromMenu()
+        }
+    }
+
+    /** Menu "Leave Room": only call leaveRoom API, do not delete player data here */
+    private fun leaveRoomFromMenu() {
+        btnRollDice.isEnabled = false
+
+        lifecycleScope.launch {
+            try {
+                val res = withContext(Dispatchers.IO) {
+                    roomStorage.leaveRoom(uid, roomId)
+                }
+                if (res.isFailure) {
+                    Toast.makeText(
+                        this@GameActivity,
+                        res.exceptionOrNull()?.message ?: "Leave room failed",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(
+                    this@GameActivity,
+                    "Leave room failed: ${e.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+
+            val intent = Intent(this@GameActivity, RoomMatchActivity::class.java)
+            startActivity(intent)
+            finish()
+        }
+    }
+
+    /** Menu "Home": go back to MainActivity and clear back stack */
+    private fun goHome() {
+        val intent = Intent(this, MainActivity::class.java)
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+        startActivity(intent)
+        finish()
+    }
+
+    // ---------- Board & events ----------
 
     private fun initBoard() {
         tileContainers.clear()
@@ -211,12 +476,14 @@ class GameActivity : AppCompatActivity() {
             val container = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                setBackgroundResource(android.R.drawable.btn_default)
+                setBackgroundResource(R.drawable.bg_tile_normal)
             }
 
             val iconView = ImageView(this).apply {
                 layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, 0, 2f
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    0,
+                    2f
                 )
                 scaleType = ImageView.ScaleType.CENTER_INSIDE
                 setImageResource(randomTileIconRes)
@@ -227,13 +494,14 @@ class GameActivity : AppCompatActivity() {
                 textSize = 12f
                 gravity = Gravity.CENTER
                 layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    0,
+                    1f
                 )
             }
 
             container.addView(iconView)
             container.addView(textView)
-
             container.setOnClickListener { onTileClicked(i) }
 
             val (row, col) = tilePositions[i]
@@ -253,8 +521,7 @@ class GameActivity : AppCompatActivity() {
         updateTileIcons()
     }
 
-    // ---------------- EVENTS ----------------
-
+    /** Initialize all random event templates and assign them randomly to tiles */
     private fun initTileEvents() {
         val treasureEvent = TileEventTemplate(
             title = "Treasure Chest",
@@ -265,13 +532,13 @@ class GameActivity : AppCompatActivity() {
                     successDescription = "The chest is full of gold!",
                     failDescription = "It was a trap! You lose a lot of coins.",
                     successCoinDelta = +40000,
-                    failCoinDelta = -60000,
+                    failCoinDelta = -30000,
                     successRatePercent = 40
                 ),
                 EventChoice(
                     label = "Inspect carefully",
-                    successDescription = "You find some coins safely.",
-                    failDescription = "Mostly junk, some effort wasted.",
+                    successDescription = "You safely find some coins inside.",
+                    failDescription = "It's mostly junk, some effort is wasted.",
                     successCoinDelta = +15000,
                     failCoinDelta = -5000,
                     successRatePercent = 75
@@ -285,18 +552,18 @@ class GameActivity : AppCompatActivity() {
             choices = listOf(
                 EventChoice(
                     label = "Pay the full toll",
-                    successDescription = "You pass smoothly.",
-                    failDescription = "Extra fees are added.",
-                    successCoinDelta = -12000,
-                    failCoinDelta = -25000,
+                    successDescription = "You pay the official fee and pass.",
+                    failDescription = "The officer still finds a problem and adds extra fees.",
+                    successCoinDelta = 0,
+                    failCoinDelta = -15000,
                     successRatePercent = 80
                 ),
                 EventChoice(
                     label = "Try to bargain",
-                    successDescription = "You pay less.",
-                    failDescription = "Heavy fine for wasting time.",
-                    successCoinDelta = -5000,
-                    failCoinDelta = -40000,
+                    successDescription = "You negotiate successfully and even save some money.",
+                    failDescription = "Negotiation fails, a heavy fine is added.",
+                    successCoinDelta = +5000,
+                    failCoinDelta = -30000,
                     successRatePercent = 45
                 )
             )
@@ -304,21 +571,21 @@ class GameActivity : AppCompatActivity() {
 
         val lotteryEvent = TileEventTemplate(
             title = "Street Lottery",
-            description = "A vendor invites you to buy a lottery ticket.",
+            description = "A street vendor invites you to buy a lottery ticket.",
             choices = listOf(
                 EventChoice(
                     label = "Buy an expensive ticket",
-                    successDescription = "Jackpot! Huge prize.",
-                    failDescription = "No luck. Big loss.",
-                    successCoinDelta = +60000,
-                    failCoinDelta = -30000,
+                    successDescription = "Jackpot! You win a huge prize.",
+                    failDescription = "No luck at all. You burn a pile of money.",
+                    successCoinDelta = +80000,
+                    failCoinDelta = -20000,
                     successRatePercent = 25
                 ),
                 EventChoice(
                     label = "Buy a cheap ticket",
-                    successDescription = "Small prize.",
-                    failDescription = "No win, small loss.",
-                    successCoinDelta = +10000,
+                    successDescription = "You win a small prize.",
+                    failDescription = "No winning number, you still lose some cash.",
+                    successCoinDelta = +15000,
                     failCoinDelta = -5000,
                     successRatePercent = 40
                 )
@@ -331,17 +598,17 @@ class GameActivity : AppCompatActivity() {
             choices = listOf(
                 EventChoice(
                     label = "Work overtime",
-                    successDescription = "Big bonus!",
-                    failDescription = "You mess up and get fined.",
+                    successDescription = "You work hard and get a big bonus.",
+                    failDescription = "You get exhausted and pay is heavily deducted.",
                     successCoinDelta = +25000,
-                    failCoinDelta = -20000,
+                    failCoinDelta = -15000,
                     successRatePercent = 55
                 ),
                 EventChoice(
                     label = "Work casually",
-                    successDescription = "Easy pay.",
-                    failDescription = "No pay today.",
-                    successCoinDelta = +9000,
+                    successDescription = "Easy shift, you still get some money.",
+                    failDescription = "Business is slow, no pay at all.",
+                    successCoinDelta = +8000,
                     failCoinDelta = 0,
                     successRatePercent = 80
                 )
@@ -350,35 +617,160 @@ class GameActivity : AppCompatActivity() {
 
         val shopEvent = TileEventTemplate(
             title = "Shopping Temptation",
-            description = "A shop is having a big SALE.",
+            description = "You walk by a shop with a big SALE sign.",
             choices = listOf(
                 EventChoice(
                     label = "Buy a fancy item",
-                    successDescription = "You resell it for profit.",
-                    failDescription = "Terrible buy. Big loss.",
-                    successCoinDelta = +25000,
-                    failCoinDelta = -50000,
+                    successDescription = "It turns out to be valuable, you resell it later.",
+                    failDescription = "Impulse purchase. It wasn't worth the price.",
+                    successCoinDelta = +30000,
+                    failCoinDelta = -35000,
                     successRatePercent = 35
                 ),
                 EventChoice(
                     label = "Just browse",
                     successDescription = "You find a small bargain.",
-                    failDescription = "Nothing interesting.",
-                    successCoinDelta = +6000,
+                    failDescription = "Nothing interesting, but you keep your money.",
+                    successCoinDelta = +5000,
                     failCoinDelta = 0,
                     successRatePercent = 70
                 )
             )
         )
 
-        val templates = listOf(treasureEvent, tollEvent, lotteryEvent, jobEvent, shopEvent)
+        val hospitalEvent = TileEventTemplate(
+            title = "Hospital Visit",
+            description = "You feel a little sick on the way.",
+            choices = listOf(
+                EventChoice(
+                    label = "Go to hospital",
+                    successDescription = "The doctor finds the issue early, you avoid big costs.",
+                    failDescription = "Tests are expensive, the bill is higher than expected.",
+                    successCoinDelta = -5000,
+                    failCoinDelta = -20000,
+                    successRatePercent = 70
+                ),
+                EventChoice(
+                    label = "Ignore it",
+                    successDescription = "It was just fatigue, you recover by resting.",
+                    failDescription = "Condition becomes worse, emergency treatment is needed.",
+                    successCoinDelta = 0,
+                    failCoinDelta = -30000,
+                    successRatePercent = 50
+                )
+            )
+        )
+
+        val taxEvent = TileEventTemplate(
+            title = "Tax Inspection",
+            description = "A tax officer checks your records.",
+            choices = listOf(
+                EventChoice(
+                    label = "Provide all documents honestly",
+                    successDescription = "Everything is correct, the officer leaves.",
+                    failDescription = "Some small errors are found, you pay a minor fine.",
+                    successCoinDelta = 0,
+                    failCoinDelta = -10000,
+                    successRatePercent = 75
+                ),
+                EventChoice(
+                    label = "Try to hide small mistakes",
+                    successDescription = "The officer doesn’t notice anything and you keep the money.",
+                    failDescription = "You are caught, a big fine is issued.",
+                    successCoinDelta = +7000,
+                    failCoinDelta = -35000,
+                    successRatePercent = 40
+                )
+            )
+        )
+
+        val festivalEvent = TileEventTemplate(
+            title = "Festival Market",
+            description = "A festival market is held nearby.",
+            choices = listOf(
+                EventChoice(
+                    label = "Open a small stall",
+                    successDescription = "Your stall is very popular, you earn a good profit.",
+                    failDescription = "Few customers show up, you barely cover costs.",
+                    successCoinDelta = +25000,
+                    failCoinDelta = -5000,
+                    successRatePercent = 60
+                ),
+                EventChoice(
+                    label = "Just enjoy the festival",
+                    successDescription = "You win some mini-games and prizes.",
+                    failDescription = "You spend some money on snacks and games.",
+                    successCoinDelta = +5000,
+                    failCoinDelta = -8000,
+                    successRatePercent = 55
+                )
+            )
+        )
+
+        val investEvent = TileEventTemplate(
+            title = "Investment Offer",
+            description = "A friend recommends a new investment project.",
+            choices = listOf(
+                EventChoice(
+                    label = "Invest a large amount",
+                    successDescription = "The project explodes in popularity, huge returns!",
+                    failDescription = "The project fails, you lose most of your money.",
+                    successCoinDelta = +90000,
+                    failCoinDelta = -60000,
+                    successRatePercent = 35
+                ),
+                EventChoice(
+                    label = "Invest carefully",
+                    successDescription = "Stable returns from a safe investment.",
+                    failDescription = "The project is slow, almost no profit.",
+                    successCoinDelta = +20000,
+                    failCoinDelta = -2000,
+                    successRatePercent = 70
+                )
+            )
+        )
+
+        val walletEvent = TileEventTemplate(
+            title = "Lost Wallet",
+            description = "You find a wallet on the street.",
+            choices = listOf(
+                EventChoice(
+                    label = "Return it to the owner",
+                    successDescription = "The owner is very grateful and gives you a reward.",
+                    failDescription = "The owner thanks you but is short on money.",
+                    successCoinDelta = +15000,
+                    failCoinDelta = 0,
+                    successRatePercent = 80
+                ),
+                EventChoice(
+                    label = "Keep the cash quietly",
+                    successDescription = "Nobody sees you, you get the money.",
+                    failDescription = "Nearby cameras catch you, you pay a fine.",
+                    successCoinDelta = +20000,
+                    failCoinDelta = -30000,
+                    successRatePercent = 50
+                )
+            )
+        )
+
+        val templates = listOf(
+            treasureEvent,
+            tollEvent,
+            lotteryEvent,
+            jobEvent,
+            shopEvent,
+            hospitalEvent,
+            taxEvent,
+            festivalEvent,
+            investEvent,
+            walletEvent
+        )
+
         tileEvents.clear()
         for (i in 0 until TOTAL_TILES) {
             tileEvents[i] = templates.random()
         }
     }
-
-    // ---------------- PROPERTIES ----------------
 
     private fun randomizePropertyPositions() {
         propertyIdToTile.clear()
@@ -387,10 +779,10 @@ class GameActivity : AppCompatActivity() {
         val availableTiles = (0 until TOTAL_TILES).toMutableList()
         allProperties.forEach { property ->
             if (availableTiles.isEmpty()) return@forEach
-            val idx = availableTiles.random()
-            availableTiles.remove(idx)
-            propertyIdToTile[property.id] = idx
-            tileToPropertyId[idx] = property.id
+            val index = availableTiles.random()
+            availableTiles.remove(index)
+            propertyIdToTile[property.id] = index
+            tileToPropertyId[index] = property.id
         }
 
         updateTileIcons()
@@ -406,43 +798,41 @@ class GameActivity : AppCompatActivity() {
 
     private fun updateTileIcons() {
         if (tileIconViews.size != TOTAL_TILES) return
+
         for (i in 0 until TOTAL_TILES) {
             val iconView = tileIconViews[i]
             val propertyId = tileToPropertyId[i]
             if (propertyId != null) {
-                iconView.setImageResource(propertyIdToIconRes[propertyId] ?: randomTileIconRes)
+                val resId = propertyIdToIconRes[propertyId] ?: randomTileIconRes
+                iconView.setImageResource(resId)
             } else {
                 iconView.setImageResource(randomTileIconRes)
             }
         }
     }
 
-    // ---------------- TILE CLICK INFO ----------------
+    // ---------- Tile click: show tile info ----------
 
     private fun onTileClicked(tileIndex: Int) {
-        // only allow when not in rolling/animating
         if (!btnRollDice.isEnabled) return
 
         val propertyId = tileToPropertyId[tileIndex]
         if (propertyId != null) {
             val info = getPropertyInfoById(propertyId) ?: return
-            val owned = playerState.ownedProperties.contains(propertyId)
+            val ownerUid = propertyOwners[propertyId]
 
-            val msg = buildString {
-                append("Tile index: $tileIndex\n")
-                append("Type: Property tile\n\n")
-                append("Name: ${info.name}\n")
-                append("Price: ${info.price} coins\n")
-                append("Income per turn: ${info.incomePerTurn} coins\n")
-                append("Owned: ${if (owned) "Yes" else "No"}\n")
-                append("\nYour coins: ${playerState.coins}")
+            if (ownerUid != null && ownerUid != uid) {
+                getOwnerName(ownerUid) { ownerName ->
+                    showPropertyInfoDialog(tileIndex, info, ownerName)
+                }
+            } else {
+                val ownerName = when {
+                    ownerUid == null -> "None"
+                    ownerUid == uid -> "You"
+                    else -> "Unknown"
+                }
+                showPropertyInfoDialog(tileIndex, info, ownerName)
             }
-
-            AlertDialog.Builder(this)
-                .setTitle("Tile Info")
-                .setMessage(msg)
-                .setPositiveButton("OK", null)
-                .show()
         } else {
             val template = tileEvents[tileIndex]
             val msg = if (template != null && template.choices.size >= 2) {
@@ -465,18 +855,37 @@ class GameActivity : AppCompatActivity() {
                     append("  On fail: ${c2.failCoinDelta} coins\n")
                 }
             } else {
-                "Tile index: $tileIndex\nType: Random event tile\n\n(No template found.)"
+                "Tile index: $tileIndex\nType: Random event tile\n\n(No detailed event template found.)"
             }
 
-            AlertDialog.Builder(this)
-                .setTitle("Tile Info")
-                .setMessage(msg)
-                .setPositiveButton("OK", null)
-                .show()
+            showGameMessageDialog(
+                iconRes = R.drawable.ic_dice,
+                title = "Tile Info",
+                message = msg
+            )
         }
     }
 
-    // ---------------- GAME LOOP ----------------
+    private fun showPropertyInfoDialog(tileIndex: Int, info: PropertyInfo, ownerName: String) {
+        val msg = buildString {
+            append("Tile index: $tileIndex\n")
+            append("Type: Property tile\n\n")
+            append("Name: ${info.name}\n")
+            append("Price: ${info.price} coins\n")
+            append("Income per turn: ${info.incomePerTurn} coins\n")
+            append("Owner: $ownerName\n\n")
+            append("Your coins: ${playerState.coins}")
+        }
+
+        showGameMessageDialog(
+            iconRes = R.drawable.ic_coin,
+            title = "Tile Info",
+            message = msg
+        )
+    }
+
+
+    // ---------- Dice roll ----------
 
     private fun onRollDice() {
         if (playerState.diceLeft <= 0) {
@@ -492,7 +901,7 @@ class GameActivity : AppCompatActivity() {
             val property = getPropertyAtTile(newPosition)
             if (property != null) {
                 val propertyId = tileToPropertyId[newPosition]!!
-                showPropertyDialog(newPosition, dice, propertyId, property)
+                handlePropertyLanding(newPosition, dice, propertyId, property)
             } else {
                 val template = tileEvents[newPosition]
                 showEventDialog(newPosition, dice, template)
@@ -500,116 +909,211 @@ class GameActivity : AppCompatActivity() {
         }
     }
 
-    private fun showPropertyDialog(
+    /** Rent formula when landing on someone else's property */
+    private fun calculateRent(info: PropertyInfo): Int {
+        // Example: rent is 2x income per turn
+        return info.incomePerTurn * 2
+    }
+
+    /** Handle landing on a property tile (buy, own, or pay rent) */
+    private fun handlePropertyLanding(
         newPosition: Int,
         dice: Int,
         propertyId: String,
         info: PropertyInfo
     ) {
-        val alreadyOwned = playerState.ownedProperties.contains(propertyId)
+        val ownerUid = propertyOwners[propertyId]
 
-        if (alreadyOwned) {
-            endTurn(newPosition, dice, 0, "You visited your property: ${info.name}.", null)
-            return
-        }
-
-        val message = buildString {
-            append("You found a property for sale!\n\n")
-            append("Name: ${info.name}\n")
-            append("Price: ${info.price} coins\n")
-            append("Income per turn: ${info.incomePerTurn} coins\n\n")
-            append("Your coins: ${playerState.coins}")
-        }
-
-        AlertDialog.Builder(this)
-            .setTitle("Buy Property?")
-            .setMessage(message)
-            .setCancelable(true)
-            .setPositiveButton("Buy") { _, _ ->
-                if (playerState.coins < info.price) {
-                    Toast.makeText(this, "Not enough coins.", Toast.LENGTH_SHORT).show()
-                    endTurn(newPosition, dice, 0, "You couldn't afford ${info.name}.", null)
-                } else {
-                    val newList = playerState.ownedProperties.toMutableList()
-                    newList.add(propertyId)
-                    endTurn(
-                        newPosition,
-                        dice,
-                        -info.price,
-                        "You bought ${info.name} for ${info.price} coins.",
-                        newList
-                    )
+        when {
+            ownerUid == null -> {
+                // No owner yet, show buy dialog
+                showPropertyBuyDialog(newPosition, dice, propertyId, info)
+            }
+            ownerUid == uid -> {
+                // Your own property
+                val desc = "You visited your property: ${info.name}."
+                endTurn(newPosition, dice, 0, desc, null)
+            }
+            else -> {
+                // Another player's property -> pay rent
+                getOwnerName(ownerUid) { ownerName ->
+                    val rent = calculateRent(info)
+                    val desc =
+                        "You landed on $ownerName's property: ${info.name} and paid $rent coins as rent."
+                    endTurn(newPosition, dice, -rent, desc, null)
                 }
             }
-            .setNegativeButton("Skip") { _, _ ->
-                endTurn(newPosition, dice, 0, "You skipped ${info.name}.", null)
-            }
-            .setOnCancelListener {
-                endTurn(newPosition, dice, 0, "You walked away from ${info.name}.", null)
-            }
-            .show()
+        }
     }
+
+    private fun showPropertyBuyDialog(
+        newPosition: Int,
+        dice: Int,
+        propertyId: String,
+        info: PropertyInfo
+    ) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_property_buy, null)
+
+        val tvTitle = dialogView.findViewById<TextView>(R.id.tvDialogTitleProp)
+        val tvName = dialogView.findViewById<TextView>(R.id.tvPropName)
+        val tvPrice = dialogView.findViewById<TextView>(R.id.tvPropPrice)
+        val tvIncome = dialogView.findViewById<TextView>(R.id.tvPropIncome)
+        val tvCoins = dialogView.findViewById<TextView>(R.id.tvPropCoins)
+        val ivIcon = dialogView.findViewById<ImageView>(R.id.ivPropertyIcon)
+        val btnBuy = dialogView.findViewById<Button>(R.id.btnBuyProp)
+        val btnSkip = dialogView.findViewById<Button>(R.id.btnSkipProp)
+
+        tvTitle.text = "Buy Property?"
+        tvName.text = info.name
+        tvPrice.text = "Price: ${info.price} coins"
+        tvIncome.text = "Income per turn: ${info.incomePerTurn} coins"
+        tvCoins.text = "Your coins: ${playerState.coins}"
+
+        val resId = propertyIdToIconRes[propertyId]
+        if (resId != null) {
+            ivIcon.setImageResource(resId)
+        } else {
+            ivIcon.setImageResource(R.drawable.ic_coin)
+        }
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setCancelable(true)
+            .create()
+
+        btnBuy.setOnClickListener {
+            dialog.dismiss()
+            if (playerState.coins < info.price) {
+                Toast.makeText(
+                    this,
+                    "Not enough coins to buy this property.",
+                    Toast.LENGTH_SHORT
+                ).show()
+                val desc = "You wanted to buy ${info.name}, but didn't have enough coins."
+                endTurn(newPosition, dice, 0, desc, null)
+            } else {
+                val newList = playerState.ownedProperties.toMutableList()
+                if (!newList.contains(propertyId)) newList.add(propertyId)
+                propertyOwners[propertyId] = uid
+                saveRoomBoard()
+
+                val desc = "You bought property: ${info.name} for ${info.price} coins."
+                endTurn(newPosition, dice, -info.price, desc, newList)
+            }
+        }
+
+        btnSkip.setOnClickListener {
+            dialog.dismiss()
+            val desc = "You decided not to buy ${info.name}."
+            endTurn(newPosition, dice, 0, desc, null)
+        }
+
+        dialog.setOnCancelListener {
+            val desc = "You hesitated and walked away from ${info.name}."
+            endTurn(newPosition, dice, 0, desc, null)
+        }
+
+        dialog.show()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+    }
+
 
     private fun showEventDialog(newPosition: Int, dice: Int, template: TileEventTemplate?) {
         if (template == null || template.choices.size < 2) {
-            applyEventChoice(newPosition, dice, ResolvedEvent("Nothing happens.", 0))
+            val result = ResolvedEvent("Nothing happens on this tile.", 0)
+            applyEventChoice(newPosition, dice, result)
             return
         }
 
-        val c1 = template.choices[0]
-        val c2 = template.choices[1]
+        val choice1 = template.choices[0]
+        val choice2 = template.choices[1]
 
-        val message = buildString {
-            append("You landed on tile $newPosition.\n\n")
-            append(template.description)
-            append("\n\n")
+        val dialogView = layoutInflater.inflate(R.layout.dialog_event_choice, null)
 
-            append("Option 1: ${c1.label}\n")
-            append("Success rate: ${c1.successRatePercent}%\n")
-            append("On success: ${c1.successCoinDelta}\n")
-            append("On fail: ${c1.failCoinDelta}\n\n")
+        val ivIcon = dialogView.findViewById<ImageView>(R.id.ivDialogIcon)
+        val tvTitle = dialogView.findViewById<TextView>(R.id.tvDialogTitle)
+        val tvDesc = dialogView.findViewById<TextView>(R.id.tvEventDesc)
+        val tvOpt1Title = dialogView.findViewById<TextView>(R.id.tvOption1Title)
+        val tvOpt1Detail = dialogView.findViewById<TextView>(R.id.tvOption1Detail)
+        val tvOpt2Title = dialogView.findViewById<TextView>(R.id.tvOption2Title)
+        val tvOpt2Detail = dialogView.findViewById<TextView>(R.id.tvOption2Detail)
+        val btnChoice1 = dialogView.findViewById<Button>(R.id.btnChoice1)
+        val btnChoice2 = dialogView.findViewById<Button>(R.id.btnChoice2)
 
-            append("Option 2: ${c2.label}\n")
-            append("Success rate: ${c2.successRatePercent}%\n")
-            append("On success: ${c2.successCoinDelta}\n")
-            append("On fail: ${c2.failCoinDelta}\n")
+        ivIcon.setImageResource(R.drawable.ic_dice)
+        tvTitle.text = template.title
+        tvDesc.text = template.description
+
+        tvOpt1Title.text = choice1.label
+        tvOpt1Detail.text = buildString {
+            append("Success rate: ${choice1.successRatePercent}%\n")
+            append("On success: ${choice1.successCoinDelta} coins\n")
+            append("On fail: ${choice1.failCoinDelta} coins")
         }
 
-        AlertDialog.Builder(this)
-            .setTitle(template.title)
-            .setMessage(message)
+        tvOpt2Title.text = choice2.label
+        tvOpt2Detail.text = buildString {
+            append("Success rate: ${choice2.successRatePercent}%\n")
+            append("On success: ${choice2.successCoinDelta} coins\n")
+            append("On fail: ${choice2.failCoinDelta} coins")
+        }
+
+        btnChoice1.text = choice1.label
+        btnChoice2.text = choice2.label
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
             .setCancelable(true)
-            .setPositiveButton(c1.label) { _, _ ->
-                applyEventChoice(newPosition, dice, resolveChoice(c1, template.title))
-            }
-            .setNegativeButton(c2.label) { _, _ ->
-                applyEventChoice(newPosition, dice, resolveChoice(c2, template.title))
-            }
-            .setOnCancelListener {
-                applyEventChoice(newPosition, dice, resolveChoice(c2, template.title))
-            }
-            .show()
+            .create()
+
+        btnChoice1.setOnClickListener {
+            dialog.dismiss()
+            val result = resolveChoice(choice1, template.title)
+            applyEventChoice(newPosition, dice, result)
+        }
+
+        btnChoice2.setOnClickListener {
+            dialog.dismiss()
+            val result = resolveChoice(choice2, template.title)
+            applyEventChoice(newPosition, dice, result)
+        }
+
+        dialog.setOnCancelListener {
+            // 和原来逻辑一样，取消等同选择第二个选项
+            val result = resolveChoice(choice2, template.title)
+            applyEventChoice(newPosition, dice, result)
+        }
+
+        dialog.show()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
     }
+
 
     private fun resolveChoice(choice: EventChoice, title: String): ResolvedEvent {
         val roll = Random.nextInt(0, 100)
         val success = roll < choice.successRatePercent
         return if (success) {
             ResolvedEvent(
-                "$title - ${choice.label}: SUCCESS! ${choice.successDescription}",
-                choice.successCoinDelta
+                description = "$title - ${choice.label}: SUCCESS! ${choice.successDescription}",
+                coinDelta = choice.successCoinDelta
             )
         } else {
             ResolvedEvent(
-                "$title - ${choice.label}: FAILED. ${choice.failDescription}",
-                choice.failCoinDelta
+                description = "$title - ${choice.label}: FAILED. ${choice.failDescription}",
+                coinDelta = choice.failCoinDelta
             )
         }
     }
 
-    private fun applyEventChoice(newPosition: Int, dice: Int, result: ResolvedEvent) {
+    private fun applyEventChoice(
+        newPosition: Int,
+        dice: Int,
+        result: ResolvedEvent
+    ) {
         endTurn(newPosition, dice, result.coinDelta, result.description, null)
     }
+
+    // ---------- End turn & bankruptcy ----------
 
     private fun endTurn(
         newPosition: Int,
@@ -622,12 +1126,13 @@ class GameActivity : AppCompatActivity() {
         val propertyIncome = calculatePropertyIncome(owned)
         val totalDelta = baseCoinDelta + propertyIncome
         val newCoinsRaw = playerState.coins + totalDelta
-        val newDiceLeft = playerState.diceLeft - 1   // 用掉一个骰子
-        val newDiceUsed = playerState.diceUsedToday + 1
+        val newDiceLeft = playerState.diceLeft - 1
 
         val finalDesc = buildString {
             append(description)
-            if (propertyIncome != 0) append(" Property income: $propertyIncome.")
+            if (propertyIncome != 0) {
+                append(" Property income this turn: $propertyIncome.")
+            }
         }
 
         if (newCoinsRaw < 0) {
@@ -639,19 +1144,32 @@ class GameActivity : AppCompatActivity() {
             coins = newCoinsRaw,
             position = newPosition,
             diceLeft = newDiceLeft,
-            ownedProperties = owned,
-            diceUsedToday = newDiceUsed
+            ownedProperties = owned
         )
 
         updateUI()
-        savePlayerStateToFirebase()
+        savePlayerState()
+
+        tvEvent.text = finalDesc
+        tvEvent.alpha = 0f
+        tvEvent.animate()
+            .alpha(1f)
+            .setDuration(220)
+            .start()
+
+        lifecycleScope.launch {
+            refreshPlayerMarkers()
+            updateBoardHighlight()
+        }
+
         showTurnResultDialog(newPosition, dice, ResolvedEvent(finalDesc, totalDelta))
     }
 
     private fun calculatePropertyIncome(ownedIds: List<String>): Int {
         var total = 0
-        ownedIds.forEach { id ->
-            getPropertyInfoById(id)?.let { total += it.incomePerTurn }
+        for (id in ownedIds) {
+            val info = getPropertyInfoById(id)
+            if (info != null) total += info.incomePerTurn
         }
         return total
     }
@@ -663,48 +1181,183 @@ class GameActivity : AppCompatActivity() {
         totalDelta: Int,
         newCoinsRaw: Int
     ) {
-        val message = """
-            Rolled: $dice, moved to tile $newPosition.
+        val message = buildString {
+            append("Rolled: $dice, moved to tile $newPosition.\n\n")
+            append(description)
+            append("\n\n")
+            append("Coin change this turn: $totalDelta\n")
+            append("Your coins would become: $newCoinsRaw (< 0).\n\n")
+            append("Game over! You are bankrupt.\n")
+            append("You will leave this room.")
+        }
 
-            $description
+        val dialogView = layoutInflater.inflate(R.layout.dialog_game_over, null)
 
-            Coin change this turn: $totalDelta
-            Your coins would become: $newCoinsRaw (< 0).
+        val ivIcon = dialogView.findViewById<ImageView>(R.id.ivGameOverIcon)
+        val tvTitle = dialogView.findViewById<TextView>(R.id.tvGameOverTitle)
+        val tvMsg = dialogView.findViewById<TextView>(R.id.tvGameOverMessage)
+        val btnLeave = dialogView.findViewById<Button>(R.id.btnLeaveRoom)
 
-            Game over! You are bankrupt.
-            A new game will start.
-        """.trimIndent()
+        ivIcon.setImageResource(R.drawable.ic_coin) // 有骷髅图标的话可以换成别的
+        tvTitle.text = "Game Over"
+        tvMsg.text = message
 
-        AlertDialog.Builder(this)
-            .setTitle("Game Over")
-            .setMessage(message)
+        val gameOverDialog = AlertDialog.Builder(this)
+            .setView(dialogView)
             .setCancelable(false)
-            .setPositiveButton("Start New Game") { d, _ ->
-                d.dismiss()
-                startNewGame()
+            .create()
+
+        btnLeave.setOnClickListener {
+            gameOverDialog.dismiss()
+            onGameOverExitRoom()
+        }
+
+        gameOverDialog.show()
+        gameOverDialog.window?.setBackgroundDrawable(
+            ColorDrawable(Color.TRANSPARENT)
+        )
+    }
+
+    /** On bankruptcy: delete this member doc, then call leaveRoom */
+    private fun onGameOverExitRoom() {
+        btnRollDice.isEnabled = false
+
+        lifecycleScope.launch {
+            try {
+                firestore.collection(ROOMS_COLLECTION)
+                    .document(roomId)
+                    .collection(MEMBERS_SUBCOLLECTION)
+                    .document(uid)
+                    .delete()
+                    .await()
+            } catch (e: Exception) {
+                Toast.makeText(
+                    this@GameActivity,
+                    "Failed to delete player data: ${e.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
-            .show()
+
+            try {
+                val res = withContext(Dispatchers.IO) {
+                    roomStorage.leaveRoom(uid, roomId)
+                }
+                if (res.isFailure) {
+                    Toast.makeText(
+                        this@GameActivity,
+                        res.exceptionOrNull()?.message ?: "leave room failed",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(
+                    this@GameActivity,
+                    "leave room failed: ${e.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+
+            val intent = Intent(this@GameActivity, RoomMatchActivity::class.java)
+            startActivity(intent)
+            finish()
+        }
     }
 
-    private fun showTurnResultDialog(newPosition: Int, dice: Int, event: ResolvedEvent) {
-        val message = """
-            Rolled: $dice, moved to tile $newPosition.
+    private fun showGameConfirmDialog(
+        iconRes: Int,
+        title: String,
+        message: String,
+        positiveText: String,
+        negativeText: String = "Cancel",
+        onPositive: () -> Unit
+    ) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_game_confirm, null)
 
-            ${event.description}
+        val ivIcon = dialogView.findViewById<ImageView>(R.id.ivConfirmIcon)
+        val tvTitle = dialogView.findViewById<TextView>(R.id.tvConfirmTitle)
+        val tvMsg = dialogView.findViewById<TextView>(R.id.tvConfirmMessage)
+        val btnNegative = dialogView.findViewById<Button>(R.id.btnConfirmNegative)
+        val btnPositive = dialogView.findViewById<Button>(R.id.btnConfirmPositive)
 
-            Coin change this turn: ${event.coinDelta}
-            Total coins: ${playerState.coins}
-        """.trimIndent()
+        ivIcon.setImageResource(iconRes)
+        tvTitle.text = title
+        tvMsg.text = message
+        btnNegative.text = negativeText
+        btnPositive.text = positiveText
 
-        AlertDialog.Builder(this)
-            .setTitle("Turn Result")
-            .setMessage(message)
-            .setPositiveButton("OK") { d, _ -> d.dismiss() }
-            .setOnDismissListener { btnRollDice.isEnabled = true }
-            .show()
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setCancelable(true)
+            .create()
+
+        btnNegative.setOnClickListener { dialog.dismiss() }
+        btnPositive.setOnClickListener {
+            dialog.dismiss()
+            onPositive()
+        }
+
+        dialog.show()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
     }
 
-    // ---------------- DICE ANIMATION ----------------
+    private fun showGameMessageDialog(
+        iconRes: Int,
+        title: String,
+        message: String,
+        onDismiss: (() -> Unit)? = null
+    ) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_game_message, null)
+
+        val ivIcon = dialogView.findViewById<ImageView>(R.id.ivDialogIcon)
+        val tvTitle = dialogView.findViewById<TextView>(R.id.tvDialogTitle)
+        val tvMessage = dialogView.findViewById<TextView>(R.id.tvDialogMessage)
+        val btnOk = dialogView.findViewById<Button>(R.id.btnDialogOk)
+
+        ivIcon.setImageResource(iconRes)
+        tvTitle.text = title
+        tvMessage.text = message
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setCancelable(true)
+            .create()
+
+        btnOk.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.setOnDismissListener {
+            onDismiss?.invoke()
+        }
+
+        dialog.show()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+    }
+
+    private fun showTurnResultDialog(
+        newPosition: Int,
+        dice: Int,
+        event: ResolvedEvent
+    ) {
+        val message = buildString {
+            append("Rolled: $dice, moved to tile $newPosition.\n\n")
+            append(event.description)
+            append("\n\n")
+            append("Coin change this turn: ${event.coinDelta}\n")
+            append("Total coins: ${playerState.coins}")
+        }
+
+        showGameMessageDialog(
+            iconRes = R.drawable.ic_dice,
+            title = "Turn Result",
+            message = message
+        ) {
+            btnRollDice.isEnabled = true
+        }
+    }
+
+
+    // ---------- Dice animation ----------
 
     private fun playDiceAnimation(finalDice: Int, onEnd: () -> Unit) {
         val duration = 700L
@@ -718,18 +1371,21 @@ class GameActivity : AppCompatActivity() {
         }
 
         val rotate = ObjectAnimator.ofFloat(diceImageView, "rotation", 0f, 360f)
+        val flipY = ObjectAnimator.ofFloat(diceImageView, "rotationY", 0f, 360f)
         val scaleX = ObjectAnimator.ofFloat(diceImageView, "scaleX", 1f, 1.3f, 1f)
         val scaleY = ObjectAnimator.ofFloat(diceImageView, "scaleY", 1f, 1.3f, 1f)
 
         rotate.duration = duration
+        flipY.duration = duration
         scaleX.duration = duration
         scaleY.duration = duration
 
         AnimatorSet().apply {
-            playTogether(rotate, scaleX, scaleY, frameAnimator)
+            playTogether(rotate, flipY, scaleX, scaleY, frameAnimator)
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
                     diceImageView.rotation = 0f
+                    diceImageView.rotationY = 0f
                     diceImageView.scaleX = 1f
                     diceImageView.scaleY = 1f
                     diceImageView.setImageResource(diceDrawables[finalDice - 1])
@@ -740,207 +1396,290 @@ class GameActivity : AppCompatActivity() {
         }
     }
 
-    // ---------------- UI & STATE ----------------
+
+    // ---------- UI & state ----------
 
     private fun updateUI() {
         tvCoins.text = "Coins: ${playerState.coins}"
         tvDiceLeft.text = "Dice left: ${playerState.diceLeft}"
-        tvEvent.text = ""
         updateBoardHighlight()
         updateTileIcons()
     }
 
+
+    /** Use all players' markers to color the board tiles */
     private fun updateBoardHighlight() {
         tileContainers.forEachIndexed { index, container ->
-            if (index == playerState.position) {
-                container.setBackgroundColor(0xFF00FF00.toInt())
-            } else {
-                container.setBackgroundResource(android.R.drawable.btn_default)
+            val playersHere = playerMarkers.filter { it.position == index }
+            when {
+                playersHere.isEmpty() -> {
+                    container.setBackgroundResource(R.drawable.bg_tile_normal)
+                }
+                playersHere.size == 1 -> {
+                    container.setBackgroundColor(playersHere[0].color)
+                }
+                else -> {
+                    container.setBackgroundColor(0xFF777777.toInt())
+                }
             }
         }
+
+        val myPos = playerState.position
+        tileContainers.getOrNull(myPos)?.apply {
+            animate().cancel()
+            scaleX = 1f
+            scaleY = 1f
+            animate()
+                .scaleX(1.06f)
+                .scaleY(1.06f)
+                .setDuration(120)
+                .withEndAction {
+                    animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(120)
+                        .start()
+                }
+                .start()
+        }
     }
+
 
     private fun startNewGame() {
         initTileEvents()
         randomizePropertyPositions()
+        propertyOwners.clear()
+        saveRoomBoard()
+
         playerState = PlayerState(
-            coins = 0,
+            coins = 10000,
             position = 0,
+            diceLeft = 0,
             ownedProperties = emptyList()
         )
         updateUI()
-        savePlayerStateToFirebase()
+        savePlayerState()
+
+        lifecycleScope.launch {
+            refreshPlayerMarkers()
+            updateBoardHighlight()
+        }
+
         btnRollDice.isEnabled = true
     }
 
-    // ======== 工具函数：月份 key & 每日骰子数量 ========
+    // ---------- Firestore I/O (coroutines) ----------
 
-    private fun currentMonthKey(): Int {
-        val cal = Calendar.getInstance()
-        val year = cal.get(Calendar.YEAR)
-        val month = cal.get(Calendar.MONTH) + 1
-        val day = cal.get(Calendar.DAY_OF_MONTH)
-        return year * 100 + month      // 例如 202501
-    }
+    /** Load room board + current player state + markers for all players */
+    private suspend fun loadPlayerAndRoomState() {
+        val roomRef = firestore.collection(ROOMS_COLLECTION).document(roomId)
 
+        try {
+            val roomSnap = roomRef.get().await()
 
-    private fun currentDayKey(): Int {
-        val cal = Calendar.getInstance()
-        val year = cal.get(Calendar.YEAR)
-        val month = cal.get(Calendar.MONTH) + 1
-        val day = cal.get(Calendar.DAY_OF_MONTH)
-        return year * 10000 + month * 100 + day    // 例如 20251201
-    }
-    /**
-     * 根据今天喝水进度计算骰子数量：
-     * 每 20% 给 1 个，最多 5 个（0~5）
-     */
-    private suspend fun calcDiceFromWater(uid: String): Int {
-        val todayTotalMl = drinkStorage.fetchTodayTotalIntake(uid)
-
-        val userSnap = firestore.collection("users")
-            .document(uid)
-            .get()
-            .await()
-
-        val goalPerDay = (userSnap.getLong("goalMl")
-            ?: userSnap.getLong("dailyGoalMl")
-            ?: 2500L).toInt()
-
-        if (goalPerDay <= 0) return 0
-
-        val percent = ((todayTotalMl.toDouble() / goalPerDay) * 100.0)
-            .toInt()
-            .coerceIn(0, 100)
-
-        // 每 20% 一个骰子，最多 5 个
-        return (percent / 20).coerceIn(0, 5)
-    }
-
-    // ---------------- FIREBASE ----------------
-
-    private fun loadPlayerStateFromFirebase() {
-        val myUid = FirebaseAuth.getInstance().currentUser?.uid
-        if (myUid == null) {
-            startNewGame()
-            return
-        }
-
-        firestore.collection(COLLECTION_NAME)
-            .document(myUid)
-            .get()
-            .addOnSuccessListener { snapshot ->
-                lifecycleScope.launch {
-                    val monthKeyNow = currentMonthKey()
-                    val lastResetMonth = snapshot.getLong("lastResetMonth")?.toInt()
-                    val needMonthlyReset =
-                        !snapshot.exists() || lastResetMonth == null || lastResetMonth != monthKeyNow
-
-                    // 1) 处理棋盘布局（月度重置）
-                    if (needMonthlyReset) {
-                        initTileEvents()
-                        randomizePropertyPositions()
-                    } else {
-                        // 恢复 propertyAssignments
-                        val assignmentsAny = snapshot.get("propertyAssignments") as? Map<*, *>
-                        if (assignmentsAny != null && assignmentsAny.isNotEmpty()) {
-                            propertyIdToTile.clear()
-                            tileToPropertyId.clear()
-                            assignmentsAny.forEach { (k, v) ->
-                                val id = k as? String ?: return@forEach
-                                val tileIndex = (v as? Long)?.toInt() ?: return@forEach
-                                propertyIdToTile[id] = tileIndex
-                                tileToPropertyId[tileIndex] = id
-                            }
-                            updateTileIcons()
-                        } else {
-                            randomizePropertyPositions()
-                        }
+            if (roomSnap.exists()) {
+                val assignmentsAny = roomSnap.get("propertyAssignments") as? Map<*, *>
+                if (assignmentsAny != null && assignmentsAny.isNotEmpty()) {
+                    propertyIdToTile.clear()
+                    tileToPropertyId.clear()
+                    assignmentsAny.forEach { (k, v) ->
+                        val id = k as? String ?: return@forEach
+                        val tileIndex = (v as? Long)?.toInt() ?: return@forEach
+                        propertyIdToTile[id] = tileIndex
+                        tileToPropertyId[tileIndex] = id
                     }
-
-                    // 2) 基本状态（金币 / 位置 / 房产）
-                    val coins = if (needMonthlyReset) 0
-                    else snapshot.getLong("coins")?.toInt() ?: 0
-
-                    val position = if (needMonthlyReset) 0
-                    else snapshot.getLong("position")?.toInt() ?: 0
-
-                    val ownedProps =
-                        if (needMonthlyReset) emptyList()
-                        else {
-                            val ownedPropsAny = snapshot.get("ownedProperties") as? List<*>
-                            ownedPropsAny?.mapNotNull { it as? String } ?: emptyList()
-                        }
-
-                    // 3) 计算今天“理论上最多可以获得”的骰子数量（0~5）
-                    val diceFromWater = calcDiceFromWater(myUid)
-
-                    // Firestore 里上次保存的骰子信息
-                    val savedDiceLeft = snapshot.getLong("diceLeft")?.toInt() ?: 0
-                    val lastDiceDayKey = snapshot.getLong("lastDiceDayKey")?.toInt()
-                    val todayKey = currentDayKey()
-
-                    // 4) 决定这次进入游戏时应该还有多少骰子
-                    val diceLeft = when {
-                        // 新月份：重新开始，当天按喝水给骰子
-                        needMonthlyReset -> diceFromWater
-
-                        // 文档不存在：第一次玩小游戏
-                        !snapshot.exists() -> diceFromWater
-
-                        // 新的一天：按喝水重新计算今天可用骰子
-                        lastDiceDayKey == null || lastDiceDayKey != todayKey -> diceFromWater
-
-                        // 同一天：保留剩余骰子，但不超过今天理论最大值
-                        else -> savedDiceLeft.coerceAtMost(diceFromWater)
-                    }
-
-                    playerState = PlayerState(
-                        coins = coins,
-                        position = position,
-                        diceLeft = diceLeft,
-                        ownedProperties = ownedProps
-                    )
-
-                    updateUI()
-                    savePlayerStateToFirebase()  // 会顺便写入 lastDiceDayKey
+                } else {
+                    randomizePropertyPositions()
                 }
-            }
-            .addOnFailureListener {
-                Toast.makeText(this, "Failed to load data: ${it.message}", Toast.LENGTH_SHORT)
-                    .show()
+
+                val ownersAny = roomSnap.get("propertyOwners") as? Map<*, *>
+                if (ownersAny != null && ownersAny.isNotEmpty()) {
+                    propertyOwners.clear()
+                    ownersAny.forEach { (k, v) ->
+                        val id = k as? String ?: return@forEach
+                        val ownerUid = v as? String ?: return@forEach
+                        propertyOwners[id] = ownerUid
+                    }
+                }
+
+                updateTileIcons()
+            } else {
                 startNewGame()
+                return
+            }
+
+            val playerSnap = roomRef.collection(MEMBERS_SUBCOLLECTION)
+                .document(uid)
+                .get()
+                .await()
+
+            if (playerSnap.exists()) {
+                val coins = playerSnap.getLong("coins")?.toInt() ?: 10000
+                val position = playerSnap.getLong("position")?.toInt() ?: 0
+                val diceLeft = playerSnap.getLong("diceLeft")?.toInt() ?: 0
+                val ownedPropsAny = playerSnap.get("ownedProperties") as? List<*>
+                val ownedProps = ownedPropsAny?.mapNotNull { it as? String } ?: emptyList()
+
+                playerState = PlayerState(coins, position, diceLeft, ownedProps)
+                updateUI()
+            } else {
+                // New player in this room: start with default state.
+                playerState = PlayerState()
+                updateUI()
+                savePlayerState()
+            }
+
+            // ---- NEW: daily dice bonus based on yesterday's drink volume ----
+            try {
+                val result = AddDiceDaily.computeDailyDice(
+                    context = this@GameActivity,
+                    uid = uid,
+                    roomId = roomId,
+                    firestore = firestore
+                )
+
+                // Only show message / change dice on the first calculation of the day.
+                if (result.isFirstTimeToday && result.diceToAdd > 0) {
+                    val addedDice = result.diceToAdd
+
+                    // Add bonus dice to the existing diceLeft.
+                    playerState = playerState.copy(
+                        diceLeft = playerState.diceLeft + addedDice
+                    )
+                    updateUI()
+                    savePlayerState()
+
+                    Toast.makeText(
+                        this@GameActivity,
+                        "Yesterday you drank ${result.yesterdayVolumeMl} ml, so you received $addedDice dice!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+// ---- NEW END ----
+
+
+            refreshPlayerMarkers()
+            updateBoardHighlight()
+        } catch (e: Exception) {
+            Toast.makeText(
+                this,
+                "Failed to load room/player: ${e.message}",
+                Toast.LENGTH_SHORT
+            ).show()
+            startNewGame()
+        }
+    }
+
+    /** Save board layout and property owners into rooms/<roomId> */
+    private fun saveRoomBoard() {
+        val roomData = hashMapOf(
+            "propertyAssignments" to propertyIdToTile,
+            "propertyOwners" to propertyOwners
+        )
+
+        firestore.collection(ROOMS_COLLECTION)
+            .document(roomId)
+            .set(roomData, SetOptions.merge())
+            .addOnFailureListener {
+                Toast.makeText(this, "Failed to save room: ${it.message}", Toast.LENGTH_SHORT)
+                    .show()
             }
     }
 
-
-    private fun savePlayerStateToFirebase() {
-        val myUid = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val monthKey = currentMonthKey()
-        val dayKey = currentDayKey()
-
+    /** Save current player state into rooms/<roomId>/members/<uid> */
+    private fun savePlayerState() {
         val data = hashMapOf(
-            "uid" to myUid,
             "coins" to playerState.coins,
             "position" to playerState.position,
             "diceLeft" to playerState.diceLeft,
-            "ownedProperties" to playerState.ownedProperties,
-            "propertyAssignments" to propertyIdToTile,
-            "lastResetMonth" to monthKey,
-            "lastDiceDayKey" to dayKey          // ⬅ 新增：记录骰子属于哪一天
+            "ownedProperties" to playerState.ownedProperties
         )
 
-        firestore.collection(COLLECTION_NAME)
-            .document(myUid)
+        firestore.collection(ROOMS_COLLECTION)
+            .document(roomId)
+            .collection(MEMBERS_SUBCOLLECTION)
+            .document(uid)
             .set(data)
             .addOnFailureListener {
-                Toast.makeText(
-                    this,
-                    "Failed to save data: ${it.message}",
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(this, "Failed to save player: ${it.message}", Toast.LENGTH_SHORT)
+                    .show()
             }
     }
 
+    /** Load all members -> assign at most 5 colors by sorted UID */
+    private suspend fun refreshPlayerMarkers() {
+        try {
+            val membersRef = firestore.collection(ROOMS_COLLECTION)
+                .document(roomId)
+                .collection(MEMBERS_SUBCOLLECTION)
 
+            val snapshot = membersRef.get().await()
+            if (snapshot.isEmpty) {
+                playerMarkers.clear()
+                return
+            }
+
+            val docs = snapshot.documents
+            val uids = docs.map { it.id }
+            val positions = docs.associate { doc ->
+                val p = doc.getLong("position")?.toInt() ?: 0
+                doc.id to p
+            }
+
+            val sortedUids = uids.sorted().take(PLAYER_COLORS.size)
+
+            val nameMap = mutableMapOf<String, String>()
+            coroutineScope {
+                sortedUids.map { memberUid ->
+                    async(Dispatchers.IO) {
+                        try {
+                            val userSnap = firestore.collection("users")
+                                .document(memberUid)
+                                .get()
+                                .await()
+                            nameMap[memberUid] =
+                                userSnap.getString("name") ?: memberUid
+                        } catch (e: Exception) {
+                            nameMap[memberUid] = memberUid
+                        }
+                    }
+                }.awaitAll()
+            }
+
+            playerMarkers.clear()
+            sortedUids.forEachIndexed { index, memberUid ->
+                val pos = positions[memberUid] ?: 0
+                val color = PLAYER_COLORS[index]
+                val colorName = PLAYER_COLOR_NAMES[index]
+                val name = nameMap[memberUid] ?: memberUid
+                playerMarkers.add(PlayerMarker(memberUid, name, pos, color, colorName))
+            }
+        } catch (e: Exception) {
+            // Keep old markers if refresh failed, do not spam Toast
+        }
+    }
+
+    // ---------- Owner name lookup (single user) ----------
+
+    private fun getOwnerName(ownerUid: String, onResult: (String) -> Unit) {
+        ownerNameCache[ownerUid]?.let {
+            onResult(it)
+            return
+        }
+
+        firestore.collection("users")
+            .document(ownerUid)
+            .get()
+            .addOnSuccessListener { snap ->
+                val name = snap.getString("name") ?: ownerUid
+                ownerNameCache[ownerUid] = name
+                onResult(name)
+            }
+            .addOnFailureListener {
+                onResult(ownerUid)
+            }
+    }
 }

@@ -1,0 +1,23 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/menu_room_id"
+        android:title="View Room ID" />
+
+    <item
+        android:id="@+id/menu_members"
+        android:title="View Members" />
+
+    <item
+        android:id="@+id/menu_player_colors"
+        android:title="Player Colors" />
+
+    <item
+        android:id="@+id/menu_leave_room"
+        android:title="Leave Room" />
+
+    <item
+        android:id="@+id/menu_home"
+        android:title="Home" />
+
+</menu>

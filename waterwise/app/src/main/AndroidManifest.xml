@@ -15,14 +15,6 @@
         tools:replace="android:label,android:icon,android:roundIcon,android:theme">
 
         <activity
-            android:name=".ui.onboarding.OnboardingActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Waterwise" />
-
-        <activity
-            android:name=".minigame.GameRankingActivity"
-            android:exported="false" />
-        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
@@ -31,7 +23,16 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".minigame.GameActivity" />
+        <activity
+            android:name=".minigame.GameActivity"
+            android:label="@string/title_game"
+            android:theme="@style/Theme.Waterwise.Game"
+            android:exported="false" />
+        <activity
+        android:name=".minigame.RoomMatchActivity"
+        android:label="@string/title_match"
+        android:theme="@style/Theme.Waterwise.Game"
+        android:exported="false" />
     </application>
 
 </manifest>
