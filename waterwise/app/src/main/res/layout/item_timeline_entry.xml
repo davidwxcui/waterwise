@@ -1,49 +1,125 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rootItem"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:orientation="horizontal"
     android:padding="8dp"
-    android:orientation="horizontal">
+    android:gravity="center_vertical">
 
+    <!-- 左边：时间 -->
     <TextView
         android:id="@+id/timeText"
-        android:layout_width="48dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="09:30"
+        android:text="16:10"
+        android:textSize="15sp"
         android:textStyle="bold"
-        android:gravity="center_vertical" />
+        android:textColor="@android:color/black"
+        android:layout_marginEnd="8dp" /> <!-- 原来 12dp，缩进少一点 -->
 
+    <!-- 中间：饮品名 + Intake / Effective -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:orientation="vertical"
-        android:paddingStart="8dp">
+        android:orientation="vertical">
 
+        <!-- 饮品名称 -->
         <TextView
             android:id="@+id/titleText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Water"
-            android:textStyle="bold" />
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/black" />
 
-        <TextView
-            android:id="@+id/detailText"
-            android:layout_width="wrap_content"
+        <!-- Intake 行 -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="250 ml • eff. 250 ml" />
+            android:orientation="horizontal"
+            android:layout_marginTop="2dp">
+
+            <TextView
+                android:id="@+id/tvIntakeLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Intake:"
+                android:textSize="13sp"
+                android:textColor="@android:color/black" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/tvIntakeValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="350 ml"
+                android:textSize="13sp"
+                android:textColor="@android:color/black" />
+        </LinearLayout>
+
+        <!-- Effective 行 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/tvEffectiveLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Effective:"
+                android:textSize="13sp"
+                android:textColor="@android:color/black" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/tvEffectiveValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="297 ml"
+                android:textSize="13sp"
+                android:textColor="@android:color/black" />
+        </LinearLayout>
     </LinearLayout>
 
-    <Button
-        android:id="@+id/btnEdit"
+    <!-- 右边：Edit / Delete 按钮，字稍微变大一点 -->
+    <LinearLayout
         android:layout_width="wrap_content"
-        android:layout_height="36dp"
-        android:text="Edit" />
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginStart="12dp">
 
-    <Button
-        android:id="@+id/btnDelete"
-        android:layout_width="wrap_content"
-        android:layout_height="36dp"
-        android:text="Delete"
-        android:layout_marginStart="8dp" />
+        <Button
+            android:id="@+id/btnEdit"
+            android:layout_width="72dp"
+            android:layout_height="34dp"
+            android:minHeight="0dp"
+            android:paddingLeft="12dp"
+            android:paddingRight="12dp"
+            android:text="Edit"
+            android:textSize="13sp" />
+
+        <Button
+            android:id="@+id/btnDelete"
+            android:layout_width="76dp"
+            android:layout_height="34dp"
+            android:minHeight="0dp"
+            android:layout_marginStart="8dp"
+            android:paddingLeft="12dp"
+            android:paddingRight="12dp"
+            android:text="Delete"
+            android:textSize="13sp" />
+    </LinearLayout>
+
 </LinearLayout>
