@@ -38,21 +38,13 @@ class FriendsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        binding.btnBack.setOnClickListener {
+            findNavController().navigateUp()
+        }
+
         adapter = FriendsAdapter(
             onRemoveClick = { friend ->
-                AlertDialog.Builder(requireContext())
-                    .setTitle("Remove friend")
-                    .setMessage("Remove ${friend.name}?")
-                    .setPositiveButton("Remove") { _, _ ->
-                        vm.removeFriend(friend.uid)
-                        Toast.makeText(
-                            requireContext(),
-                            "Removed ${friend.name}",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .show()
+                vm.removeFriend(friend.uid)
             }
         )
         binding.rvFriends.layoutManager = LinearLayoutManager(requireContext())
