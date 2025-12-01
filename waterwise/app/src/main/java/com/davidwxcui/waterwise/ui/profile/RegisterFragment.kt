@@ -21,6 +21,12 @@ class RegisterFragment : Fragment() {
     private var _binding: FragmentRegisterBinding? = null
     private val binding get() = _binding!!
 
+    // Check User is leave
+    private var nameTouched = false
+    private var emailTouched = false
+    private var pwTouched = false
+    private var pw2Touched = false
+
     /**
      * Backend placeholder
      */
@@ -33,60 +39,128 @@ class RegisterFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 
-        fun validateName(): Boolean {
+        fun validateName(showError: Boolean): Boolean {
             val name = binding.etName.text?.toString()?.trim().orEmpty()
             val ok = name.length in 2..30
-            binding.etName.error = if (ok) null else "Name 2–30 chars"
+            if (ok) {
+                binding.etName.error = null
+            } else if (showError) {
+                binding.etName.error = "Name 2–30 chars"
+            }
             return ok
         }
 
-        fun validateEmail(): Boolean {
+        fun validateEmail(showError: Boolean): Boolean {
             val email = binding.etEmail.text?.toString()?.trim()?.lowercase().orEmpty()
             val ok = Patterns.EMAIL_ADDRESS.matcher(email).matches()
-            binding.etEmail.error = if (ok) null else "Invalid email"
+            if (ok) {
+                binding.etEmail.error = null
+            } else if (showError) {
+                binding.etEmail.error = "Invalid email"
+            }
             return ok
         }
 
-        fun validatePassword(): Boolean {
+        fun validatePassword(showError: Boolean): Boolean {
             val pw = binding.etPassword.text?.toString().orEmpty()
             val okLen = pw.length >= 8
             val okNoSpace = !pw.contains(" ")
             val okLetter = pw.any { it.isLetter() }
             val okDigit = pw.any { it.isDigit() }
             val ok = okLen && okNoSpace && okLetter && okDigit
-            binding.etPassword.error = if (ok) null else "Min 8 chars, letters+digits, no spaces"
+            if (ok) {
+                binding.etPassword.error = null
+            } else if (showError) {
+                binding.etPassword.error = "Min 8 chars, letters+digits, no spaces"
+            }
             return ok
         }
 
-        fun validatePassword2(): Boolean {
+        fun validatePassword2(showError: Boolean): Boolean {
             val pw1 = binding.etPassword.text?.toString().orEmpty()
             val pw2 = binding.etPassword2.text?.toString().orEmpty()
             val ok = pw1 == pw2 && pw2.isNotBlank()
-            binding.etPassword2.error = if (ok) null else "Passwords do not match"
+            if (ok) {
+                binding.etPassword2.error = null
+            } else if (showError) {
+                binding.etPassword2.error = "Passwords do not match"
+            }
             return ok
         }
 
         fun updateRegisterEnabled(): Boolean {
-            val ok = validateName() && validateEmail() && validatePassword() && validatePassword2()
+            val ok = validateName(false) &&
+                    validateEmail(false) &&
+                    validatePassword(false) &&
+                    validatePassword2(false)
             binding.btnRegister.isEnabled = ok
             return ok
         }
 
-        binding.etName.doAfterTextChanged { updateRegisterEnabled() }
-        binding.etEmail.doAfterTextChanged { updateRegisterEnabled() }
-        binding.etPassword.doAfterTextChanged { updateRegisterEnabled() }
-        binding.etPassword2.doAfterTextChanged { updateRegisterEnabled() }
+        binding.etName.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                nameTouched = true
+                validateName(true)
+            }
+        }
+        binding.etEmail.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                emailTouched = true
+                validateEmail(true)
+            }
+        }
+        binding.etPassword.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                pwTouched = true
+                validatePassword(true)
+            }
+        }
+        binding.etPassword2.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                pw2Touched = true
+                validatePassword2(true)
+            }
+        }
+
+        binding.etName.doAfterTextChanged {
+            validateName(nameTouched)
+            updateRegisterEnabled()
+        }
+        binding.etEmail.doAfterTextChanged {
+            validateEmail(emailTouched)
+            updateRegisterEnabled()
+        }
+        binding.etPassword.doAfterTextChanged {
+            validatePassword(pwTouched)
+            validatePassword2(pw2Touched)
+            updateRegisterEnabled()
+        }
+        binding.etPassword2.doAfterTextChanged {
+            validatePassword2(pw2Touched)
+            updateRegisterEnabled()
+        }
+
         updateRegisterEnabled()
 
         binding.btnRegister.setOnClickListener {
-            val name = binding.etName.text?.toString()?.trim().orEmpty()
-            val email = binding.etEmail.text?.toString()?.trim()?.lowercase().orEmpty()
-            val pw1 = binding.etPassword.text?.toString().orEmpty()
+            nameTouched = true
+            emailTouched = true
+            pwTouched = true
+            pw2Touched = true
 
-            if (!updateRegisterEnabled()) {
+            val ok = validateName(true) &&
+                    validateEmail(true) &&
+                    validatePassword(true) &&
+                    validatePassword2(true)
+
+            if (!ok) {
                 Snackbar.make(binding.root, "Please fix errors", Snackbar.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
+
+            val name = binding.etName.text?.toString()?.trim().orEmpty()
+            val email = binding.etEmail.text?.toString()?.trim()?.lowercase().orEmpty()
+            val pw1 = binding.etPassword.text?.toString().orEmpty()
 
             val sp = requireContext().getSharedPreferences(AUTH_FILE, Context.MODE_PRIVATE)
             val existingEmail = sp.getString(KEY_REGISTERED_EMAIL, null)
