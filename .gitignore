@@ -11,4 +11,6 @@ waterwise/.idea/misc.xml
 /waterwise/daemon
 /waterwise/native
 /waterwise/wrapper
-local.properties
+local.propertieslocal.properties
+/waterwise/kotlin-profile
+/waterwise/.idea
