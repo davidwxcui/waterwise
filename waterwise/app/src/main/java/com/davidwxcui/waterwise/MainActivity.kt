@@ -39,13 +39,25 @@ class MainActivity : AppCompatActivity() {
 
         binding.navView.setupWithNavController(navController)
 
+        // When in  Friends / FriendRequests Page High light Home tab
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            when (destination.id) {
+                R.id.navigation_home,
+                R.id.friendsFragment,
+                R.id.friendRequestsFragment -> {
+                    binding.navView.menu.findItem(R.id.navigation_home).isChecked = true
+                }
+            }
+        }
+
         binding.fabAdd.setOnClickListener {
             for (i in 0 until binding.navView.menu.size()) {
                 binding.navView.menu.getItem(i).isChecked = false
             }
 
-            // Highlight FAB with color change and scale
-            binding.fabAdd.setBackgroundColor(android.graphics.Color.parseColor("#00ACC1"))
+            binding.fabAdd.setBackgroundColor(
+                android.graphics.Color.parseColor("#00ACC1")
+            )
 
             binding.fabAdd.animate().apply {
                 scaleX(1.2f)
