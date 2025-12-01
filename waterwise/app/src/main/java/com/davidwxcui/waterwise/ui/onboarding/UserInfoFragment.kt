@@ -34,10 +34,9 @@ class UserInfoFragment : Fragment() {
 
         binding.btnNext.setOnClickListener {
             val name = binding.etName.text.toString().trim()
-            val email = binding.etEmail.text.toString().trim()
 
-            // Save name and email to view model
-            viewModel.setUserInfo(name, email)
+            // Save only name to view model (email comes from registration)
+            viewModel.setUserInfo(name)
 
             // Navigate to gender selection
             findNavController().navigate(R.id.action_userInfo_to_gender)

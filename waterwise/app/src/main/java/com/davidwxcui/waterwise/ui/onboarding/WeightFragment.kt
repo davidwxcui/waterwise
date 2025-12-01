@@ -63,11 +63,13 @@ class WeightFragment : Fragment() {
                     minValue = 30
                     maxValue = 200
                     value = 70
+                    displayedValues = (30..200).map { it.toString() }.toTypedArray()
                 }
                 WeightUnit.LB -> {
                     minValue = 66
                     maxValue = 440
                     value = 154
+                    displayedValues = (66..440).map { it.toString() }.toTypedArray()
                 }
             }
             wrapSelectorWheel = false

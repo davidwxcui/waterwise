@@ -22,9 +22,9 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
     val dailyGoalMl: LiveData<Int> = _dailyGoalMl
 
     // Update methods for each onboarding step
-    fun setUserInfo(name: String, email: String) {
+    fun setUserInfo(name: String) {
         userProfile.name = name
-        userProfile.email = email
+        // Email is obtained from Firebase Auth registration, not from onboarding
     }
 
     fun setGender(gender: Gender) {

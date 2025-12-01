@@ -98,6 +98,9 @@ class ProfileFragment : Fragment() {
             setupAuthButtons()
             Snackbar.make(binding.root, "Logged out", Snackbar.LENGTH_SHORT).show()
         }
+
+        // Hide Reset Goal button when not logged in
+        binding.btnResetGoal.isVisible = loggedIn
     }
 
     private fun profileForUi(): Profile {
