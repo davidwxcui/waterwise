@@ -1,70 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout
+<androidx.core.widget.NestedScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/rankingScroll"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="@android:color/white">
 
-    <!-- Repeated water background filling the screen -->
     <LinearLayout
-        android:id="@+id/bgContainer"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
 
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:src="@drawable/bg_water_ranking_board"
-            android:scaleType="centerCrop" />
-
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:src="@drawable/bg_water_ranking_board"
-            android:scaleType="centerCrop" />
-
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:src="@drawable/bg_water_ranking_board"
-            android:scaleType="centerCrop" />
-
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:src="@drawable/bg_water_ranking_board"
-            android:scaleType="centerCrop" />
-    </LinearLayout>
-
-    <!-- Foreground scrollable content -->
-    <androidx.core.widget.NestedScrollView
-        android:id="@+id/rankingScroll"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:fillViewport="true"
-        android:background="@android:color/transparent">
-
-        <LinearLayout
+        <!-- 整个排行榜的大卡片，样式跟 Personal Information 一样 -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/rankingCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            app:cardCornerRadius="14dp"
+            app:cardElevation="2dp">
 
-            <!-- Header + subtitle + my card + tabs on top of background -->
             <LinearLayout
-                android:id="@+id/headerContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="#80FFFFFF"
-                android:padding="16dp"
-                android:layout_marginBottom="16dp">
+                android:padding="16dp">
 
-                <!-- Header row -->
+                <!-- 顶部标题行 -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -72,16 +36,16 @@
                     android:gravity="center_vertical"
                     android:layout_marginBottom="16dp">
 
-                    <!-- Back button -->
+                    <!-- 返回按钮 -->
                     <ImageButton
                         android:id="@+id/btnBackRanking"
                         android:layout_width="32dp"
                         android:layout_height="32dp"
-                        android:background="@android:color/transparent"
+                        android:background="?attr/selectableItemBackgroundBorderless"
                         android:src="@android:drawable/ic_media_previous"
                         android:contentDescription="Back" />
 
-                    <!-- Screen title -->
+                    <!-- 标题 -->
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -90,39 +54,39 @@
                         android:text="Daily Water Ranking"
                         android:textSize="20sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/black" />
+                        android:textColor="#1E2A3A" />
 
-                    <!-- Leaderboard icon (optional) -->
+                    <!-- 排行榜图标 -->
                     <ImageView
                         android:id="@+id/rankingIcon"
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:src="@drawable/ic_leaderboard"
                         android:contentDescription="Ranking icon" />
                 </LinearLayout>
 
-                <!-- Subtitle / description -->
+                <!-- 副标题 -->
                 <TextView
                     android:id="@+id/rankingSubtitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Today · Compare your water intake with friends"
                     android:textSize="13sp"
-                    android:textColor="#999999"
+                    android:textColor="#7A8A9A"
                     android:layout_marginBottom="12dp" />
 
-                <!-- My ranking card (no avatar, show user ID) -->
+                <!-- 我的排名小卡片 -->
                 <LinearLayout
                     android:id="@+id/myRankCard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:padding="16dp"
-                    android:background="#CCFFFFFF"
+                    android:padding="12dp"
+                    android:background="#F7F8FF"
                     android:gravity="center_vertical"
                     android:layout_marginBottom="16dp">
 
-                    <!-- My rank number -->
+                    <!-- 排名号 -->
                     <TextView
                         android:id="@+id/myRankNumber"
                         android:layout_width="wrap_content"
@@ -130,9 +94,9 @@
                         android:text="#1"
                         android:textSize="24sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/black" />
+                        android:textColor="#1E2A3A" />
 
-                    <!-- User info: ID + today intake -->
+                    <!-- ID + 今日喝水 -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -140,7 +104,6 @@
                         android:orientation="vertical"
                         android:layout_marginStart="12dp">
 
-                        <!-- User ID -->
                         <TextView
                             android:id="@+id/myUserId"
                             android:layout_width="wrap_content"
@@ -148,19 +111,18 @@
                             android:text="ID: 123456"
                             android:textSize="16sp"
                             android:textStyle="bold"
-                            android:textColor="@android:color/black" />
+                            android:textColor="#1E2A3A" />
 
-                        <!-- Today water intake -->
                         <TextView
                             android:id="@+id/myAmount"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="1850 ml today"
-                            android:textColor="#666666"
+                            android:textColor="#7A8A9A"
                             android:textSize="13sp" />
                     </LinearLayout>
 
-                    <!-- Completion percent -->
+                    <!-- 完成百分比 -->
                     <TextView
                         android:id="@+id/myPercent"
                         android:layout_width="wrap_content"
@@ -168,17 +130,17 @@
                         android:text="74%"
                         android:textSize="18sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/black" />
+                        android:textColor="#1E2A3A" />
                 </LinearLayout>
 
-                <!-- Range tabs: Today / 7 days / 30 days -->
+                <!-- 时间范围 Tabs -->
                 <LinearLayout
                     android:id="@+id/rangeTabs"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:layout_marginBottom="8dp">
+                    android:layout_marginBottom="12dp">
 
                     <TextView
                         android:id="@+id/tabToday"
@@ -187,8 +149,8 @@
                         android:layout_weight="1"
                         android:gravity="center"
                         android:text="Today"
-                        android:textSize="14sp"
                         android:textStyle="bold"
+                        android:textSize="14sp"
                         android:padding="8dp" />
 
                     <TextView
@@ -211,38 +173,45 @@
                         android:textSize="14sp"
                         android:padding="8dp" />
                 </LinearLayout>
+
+                <!-- Friends leaderboard title -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Friends leaderboard"
+                    android:textStyle="bold"
+                    android:textSize="16sp"
+                    android:textColor="#1E2A3A"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="4dp" />
+
+                <!-- 空数据提示 -->
+                <TextView
+                    android:id="@+id/rankingEmpty"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="No ranking data yet"
+                    android:textSize="13sp"
+                    android:textColor="#999999"
+                    android:padding="8dp"
+                    android:visibility="gone" />
+
+                <!-- 排行列表 -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rankingList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"
+                    android:overScrollMode="never" />
+
             </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-            <!-- Friends leaderboard title -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Friends leaderboard"
-                android:textStyle="bold"
-                android:textSize="16sp"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="4dp" />
+        <!-- 底部留点空白，避免被导航栏挡住 -->
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="32dp"/>
 
-            <!-- Empty state text -->
-            <TextView
-                android:id="@+id/rankingEmpty"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="No ranking data yet"
-                android:textSize="13sp"
-                android:textColor="#999999"
-                android:padding="8dp"
-                android:visibility="gone" />
+    </LinearLayout>
 
-            <!-- Leaderboard list -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rankingList"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:nestedScrollingEnabled="false"
-                android:overScrollMode="never" />
-
-        </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
-
-</FrameLayout>
+</androidx.core.widget.NestedScrollView>

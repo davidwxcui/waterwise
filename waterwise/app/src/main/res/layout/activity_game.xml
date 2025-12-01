@@ -6,14 +6,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- 顶部状态栏：金币 + 骰子剩余 -->
+    <!-- 顶部状态栏：金币 + 骰子剩余 + 排行按钮 -->
     <LinearLayout
         android:orientation="horizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:weightSum="2">
+        android:gravity="center_vertical">
 
+        <!-- 左边：金币 -->
         <TextView
             android:id="@+id/tvCoins"
             android:layout_width="0dp"
@@ -22,17 +22,37 @@
             android:text="Coins: 1000"
             android:textSize="18sp" />
 
-        <TextView
-            android:id="@+id/tvDiceLeft"
-            android:layout_width="0dp"
+        <!-- 右边：骰子 + 排行按钮 -->
+        <LinearLayout
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="end"
-            android:text="Dice left: 20"
-            android:textSize="18sp" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvDiceLeft"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Dice left: 20"
+                android:textSize="18sp" />
+
+            <ImageView
+                android:id="@+id/btnGameRanking"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="top|end"
+                android:layout_margin="4dp"
+                android:src="@drawable/ic_gameranking"
+                android:background="@android:color/transparent"
+                android:contentDescription="Game Ranking"
+                android:padding="4dp"
+                android:clickable="true"
+                android:focusable="true" />
+
+        </LinearLayout>
     </LinearLayout>
 
-    <!-- 棋盘 + 骰子 + ⭐排行榜按钮(右上角悬浮) -->
+    <!-- 棋盘 + 骰子 -->
     <FrameLayout
         android:id="@+id/boardContainer"
         android:layout_width="match_parent"
@@ -60,18 +80,6 @@
             android:layout_gravity="center"
             android:scaleType="centerInside"
             android:src="@drawable/dice_1" />
-
-        <!-- ⭐ 新增：游戏排行榜按钮，悬浮在右上角 -->
-        <ImageButton
-            android:id="@+id/btnGameRanking"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_gravity="top|end"
-            android:layout_margin="8dp"
-            android:src="@drawable/ic_gameranking"
-            android:background="@android:color/transparent"
-            android:contentDescription="Game Ranking"
-            android:padding="4dp" />
     </FrameLayout>
 
     <!-- 事件提示 -->

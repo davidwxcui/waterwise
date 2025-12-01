@@ -12,24 +12,28 @@ import android.widget.*
 import android.widget.LinearLayout
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import com.davidwxcui.waterwise.R
+import androidx.lifecycle.lifecycleScope
 import com.davidwxcui.waterwise.MainActivity
+import com.davidwxcui.waterwise.R
+import com.davidwxcui.waterwise.data.FirestoreDrinkStorage
 import com.google.firebase.FirebaseApp
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlin.math.min
 import kotlin.random.Random
-
 import android.widget.ImageButton
-import com.davidwxcui.waterwise.minigame.GameRankingActivity
-private lateinit var btnGameRanking: ImageButton
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import java.util.Calendar
 
 // ================== DATA MODELS ==================
 
 data class PlayerState(
-    val coins: Int = 100000,              // 初始金币（适配×100）
+    val coins: Int = 0,          // 初始金币：现在从 0 开始
     val position: Int = 0,
-    val diceLeft: Int = 20,
-    val ownedProperties: List<String> = emptyList()
+    val diceLeft: Int = 0,       // 初始骰子：0，靠喝水解锁
+    val ownedProperties: List<String> = emptyList(),
+    val diceUsedToday: Int = 0
 )
 
 data class EventChoice(
@@ -66,8 +70,9 @@ class GameActivity : AppCompatActivity() {
     companion object {
         private const val TOTAL_TILES = 22
         private const val COLLECTION_NAME = "games"
-        private const val DOCUMENT_ID = "player1"
     }
+
+    private lateinit var btnGameRanking: ImageView
 
     // 8x5 outer ring positions, 22 tiles, clockwise
     private val tilePositions = listOf(
@@ -81,7 +86,7 @@ class GameActivity : AppCompatActivity() {
         6 to 0, 5 to 0, 4 to 0, 3 to 0, 2 to 0, 1 to 0
     )
 
-    // 7 properties (price & income already ×100, tuned harder)
+    // 7 properties
     private val allProperties = listOf(
         PropertyInfo("coffee", "Coffee Shop", price = 40000, incomePerTurn = 3000),
         PropertyInfo("book", "Book Store", price = 60000, incomePerTurn = 4000),
@@ -119,12 +124,13 @@ class GameActivity : AppCompatActivity() {
     private lateinit var tvDiceLeft: TextView
     private lateinit var tvEvent: TextView
     private lateinit var btnRollDice: Button
-    private lateinit var btnAddDice: Button   // now Back button
+    private lateinit var btnAddDice: Button   // Back button
     private lateinit var boardGrid: GridLayout
     private lateinit var boardContainer: FrameLayout
     private lateinit var diceImageView: ImageView
 
     private val firestore: FirebaseFirestore by lazy { FirebaseFirestore.getInstance() }
+    private val drinkStorage by lazy { FirestoreDrinkStorage() }
 
     private var playerState = PlayerState()
 
@@ -136,8 +142,8 @@ class GameActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // ✅ FIX: ensure Firebase initialized before any Firestore call
         FirebaseApp.initializeApp(this)
+        supportActionBar?.hide()
 
         setContentView(R.layout.activity_game)
         initViews()
@@ -167,7 +173,7 @@ class GameActivity : AppCompatActivity() {
 
         btnRollDice.setOnClickListener { onRollDice() }
 
-        // Back to FirestoreRoomStorage page
+        // Back to main page
         btnAddDice.setOnClickListener {
             val intent = Intent(this, MainActivity::class.java)
             startActivity(intent)
@@ -175,7 +181,6 @@ class GameActivity : AppCompatActivity() {
         }
 
         btnGameRanking.setOnClickListener {
-
             val intent = Intent(this, GameRankingActivity::class.java)
             startActivity(intent)
         }
@@ -190,7 +195,6 @@ class GameActivity : AppCompatActivity() {
         boardGrid = findViewById(R.id.boardGrid)
         boardContainer = findViewById(R.id.boardContainer)
         diceImageView = findViewById(R.id.diceImageView)
-
         btnGameRanking = findViewById(R.id.btnGameRanking)
     }
 
@@ -249,7 +253,7 @@ class GameActivity : AppCompatActivity() {
         updateTileIcons()
     }
 
-    // ---------------- EVENTS (Rebalanced) ----------------
+    // ---------------- EVENTS ----------------
 
     private fun initTileEvents() {
         val treasureEvent = TileEventTemplate(
@@ -528,8 +532,13 @@ class GameActivity : AppCompatActivity() {
                 } else {
                     val newList = playerState.ownedProperties.toMutableList()
                     newList.add(propertyId)
-                    endTurn(newPosition, dice, -info.price,
-                        "You bought ${info.name} for ${info.price} coins.", newList)
+                    endTurn(
+                        newPosition,
+                        dice,
+                        -info.price,
+                        "You bought ${info.name} for ${info.price} coins.",
+                        newList
+                    )
                 }
             }
             .setNegativeButton("Skip") { _, _ ->
@@ -586,11 +595,15 @@ class GameActivity : AppCompatActivity() {
         val roll = Random.nextInt(0, 100)
         val success = roll < choice.successRatePercent
         return if (success) {
-            ResolvedEvent("$title - ${choice.label}: SUCCESS! ${choice.successDescription}",
-                choice.successCoinDelta)
+            ResolvedEvent(
+                "$title - ${choice.label}: SUCCESS! ${choice.successDescription}",
+                choice.successCoinDelta
+            )
         } else {
-            ResolvedEvent("$title - ${choice.label}: FAILED. ${choice.failDescription}",
-                choice.failCoinDelta)
+            ResolvedEvent(
+                "$title - ${choice.label}: FAILED. ${choice.failDescription}",
+                choice.failCoinDelta
+            )
         }
     }
 
@@ -609,7 +622,8 @@ class GameActivity : AppCompatActivity() {
         val propertyIncome = calculatePropertyIncome(owned)
         val totalDelta = baseCoinDelta + propertyIncome
         val newCoinsRaw = playerState.coins + totalDelta
-        val newDiceLeft = playerState.diceLeft - 1
+        val newDiceLeft = playerState.diceLeft - 1   // 用掉一个骰子
+        val newDiceUsed = playerState.diceUsedToday + 1
 
         val finalDesc = buildString {
             append(description)
@@ -625,7 +639,8 @@ class GameActivity : AppCompatActivity() {
             coins = newCoinsRaw,
             position = newPosition,
             diceLeft = newDiceLeft,
-            ownedProperties = owned
+            ownedProperties = owned,
+            diceUsedToday = newDiceUsed
         )
 
         updateUI()
@@ -749,9 +764,8 @@ class GameActivity : AppCompatActivity() {
         initTileEvents()
         randomizePropertyPositions()
         playerState = PlayerState(
-            coins = 100000,
+            coins = 0,
             position = 0,
-            diceLeft = 20,
             ownedProperties = emptyList()
         )
         updateUI()
@@ -759,65 +773,174 @@ class GameActivity : AppCompatActivity() {
         btnRollDice.isEnabled = true
     }
 
+    // ======== 工具函数：月份 key & 每日骰子数量 ========
+
+    private fun currentMonthKey(): Int {
+        val cal = Calendar.getInstance()
+        val year = cal.get(Calendar.YEAR)
+        val month = cal.get(Calendar.MONTH) + 1
+        val day = cal.get(Calendar.DAY_OF_MONTH)
+        return year * 100 + month      // 例如 202501
+    }
+
+
+    private fun currentDayKey(): Int {
+        val cal = Calendar.getInstance()
+        val year = cal.get(Calendar.YEAR)
+        val month = cal.get(Calendar.MONTH) + 1
+        val day = cal.get(Calendar.DAY_OF_MONTH)
+        return year * 10000 + month * 100 + day    // 例如 20251201
+    }
+    /**
+     * 根据今天喝水进度计算骰子数量：
+     * 每 20% 给 1 个，最多 5 个（0~5）
+     */
+    private suspend fun calcDiceFromWater(uid: String): Int {
+        val todayTotalMl = drinkStorage.fetchTodayTotalIntake(uid)
+
+        val userSnap = firestore.collection("users")
+            .document(uid)
+            .get()
+            .await()
+
+        val goalPerDay = (userSnap.getLong("goalMl")
+            ?: userSnap.getLong("dailyGoalMl")
+            ?: 2500L).toInt()
+
+        if (goalPerDay <= 0) return 0
+
+        val percent = ((todayTotalMl.toDouble() / goalPerDay) * 100.0)
+            .toInt()
+            .coerceIn(0, 100)
+
+        // 每 20% 一个骰子，最多 5 个
+        return (percent / 20).coerceIn(0, 5)
+    }
+
     // ---------------- FIREBASE ----------------
 
     private fun loadPlayerStateFromFirebase() {
+        val myUid = FirebaseAuth.getInstance().currentUser?.uid
+        if (myUid == null) {
+            startNewGame()
+            return
+        }
+
         firestore.collection(COLLECTION_NAME)
-            .document(DOCUMENT_ID)
+            .document(myUid)
             .get()
             .addOnSuccessListener { snapshot ->
-                if (snapshot.exists()) {
-                    val coins = snapshot.getLong("coins")?.toInt() ?: 100000
-                    val position = snapshot.getLong("position")?.toInt() ?: 0
-                    val diceLeft = snapshot.getLong("diceLeft")?.toInt() ?: 20
+                lifecycleScope.launch {
+                    val monthKeyNow = currentMonthKey()
+                    val lastResetMonth = snapshot.getLong("lastResetMonth")?.toInt()
+                    val needMonthlyReset =
+                        !snapshot.exists() || lastResetMonth == null || lastResetMonth != monthKeyNow
 
-                    val ownedPropsAny = snapshot.get("ownedProperties") as? List<*>
-                    val ownedProps = ownedPropsAny
-                        ?.mapNotNull { it as? String }
-                        ?: emptyList()
-
-                    val assignmentsAny = snapshot.get("propertyAssignments") as? Map<*, *>
-                    if (assignmentsAny != null && assignmentsAny.isNotEmpty()) {
-                        propertyIdToTile.clear()
-                        tileToPropertyId.clear()
-                        assignmentsAny.forEach { (k, v) ->
-                            val id = k as? String ?: return@forEach
-                            val tileIndex = (v as? Long)?.toInt() ?: return@forEach
-                            propertyIdToTile[id] = tileIndex
-                            tileToPropertyId[tileIndex] = id
-                        }
-                        updateTileIcons()
+                    // 1) 处理棋盘布局（月度重置）
+                    if (needMonthlyReset) {
+                        initTileEvents()
+                        randomizePropertyPositions()
                     } else {
-                        startNewGame()
-                        return@addOnSuccessListener
+                        // 恢复 propertyAssignments
+                        val assignmentsAny = snapshot.get("propertyAssignments") as? Map<*, *>
+                        if (assignmentsAny != null && assignmentsAny.isNotEmpty()) {
+                            propertyIdToTile.clear()
+                            tileToPropertyId.clear()
+                            assignmentsAny.forEach { (k, v) ->
+                                val id = k as? String ?: return@forEach
+                                val tileIndex = (v as? Long)?.toInt() ?: return@forEach
+                                propertyIdToTile[id] = tileIndex
+                                tileToPropertyId[tileIndex] = id
+                            }
+                            updateTileIcons()
+                        } else {
+                            randomizePropertyPositions()
+                        }
                     }
 
-                    playerState = PlayerState(coins, position, diceLeft, ownedProps)
+                    // 2) 基本状态（金币 / 位置 / 房产）
+                    val coins = if (needMonthlyReset) 0
+                    else snapshot.getLong("coins")?.toInt() ?: 0
+
+                    val position = if (needMonthlyReset) 0
+                    else snapshot.getLong("position")?.toInt() ?: 0
+
+                    val ownedProps =
+                        if (needMonthlyReset) emptyList()
+                        else {
+                            val ownedPropsAny = snapshot.get("ownedProperties") as? List<*>
+                            ownedPropsAny?.mapNotNull { it as? String } ?: emptyList()
+                        }
+
+                    // 3) 计算今天“理论上最多可以获得”的骰子数量（0~5）
+                    val diceFromWater = calcDiceFromWater(myUid)
+
+                    // Firestore 里上次保存的骰子信息
+                    val savedDiceLeft = snapshot.getLong("diceLeft")?.toInt() ?: 0
+                    val lastDiceDayKey = snapshot.getLong("lastDiceDayKey")?.toInt()
+                    val todayKey = currentDayKey()
+
+                    // 4) 决定这次进入游戏时应该还有多少骰子
+                    val diceLeft = when {
+                        // 新月份：重新开始，当天按喝水给骰子
+                        needMonthlyReset -> diceFromWater
+
+                        // 文档不存在：第一次玩小游戏
+                        !snapshot.exists() -> diceFromWater
+
+                        // 新的一天：按喝水重新计算今天可用骰子
+                        lastDiceDayKey == null || lastDiceDayKey != todayKey -> diceFromWater
+
+                        // 同一天：保留剩余骰子，但不超过今天理论最大值
+                        else -> savedDiceLeft.coerceAtMost(diceFromWater)
+                    }
+
+                    playerState = PlayerState(
+                        coins = coins,
+                        position = position,
+                        diceLeft = diceLeft,
+                        ownedProperties = ownedProps
+                    )
+
                     updateUI()
-                } else {
-                    startNewGame()
+                    savePlayerStateToFirebase()  // 会顺便写入 lastDiceDayKey
                 }
             }
             .addOnFailureListener {
-                Toast.makeText(this, "Failed to load data: ${it.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Failed to load data: ${it.message}", Toast.LENGTH_SHORT)
+                    .show()
                 startNewGame()
             }
     }
 
+
     private fun savePlayerStateToFirebase() {
+        val myUid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val monthKey = currentMonthKey()
+        val dayKey = currentDayKey()
+
         val data = hashMapOf(
+            "uid" to myUid,
             "coins" to playerState.coins,
             "position" to playerState.position,
             "diceLeft" to playerState.diceLeft,
             "ownedProperties" to playerState.ownedProperties,
-            "propertyAssignments" to propertyIdToTile
+            "propertyAssignments" to propertyIdToTile,
+            "lastResetMonth" to monthKey,
+            "lastDiceDayKey" to dayKey          // ⬅ 新增：记录骰子属于哪一天
         )
 
         firestore.collection(COLLECTION_NAME)
-            .document(DOCUMENT_ID)
+            .document(myUid)
             .set(data)
             .addOnFailureListener {
-                Toast.makeText(this, "Failed to save data: ${it.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    this,
+                    "Failed to save data: ${it.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
     }
+
+
 }

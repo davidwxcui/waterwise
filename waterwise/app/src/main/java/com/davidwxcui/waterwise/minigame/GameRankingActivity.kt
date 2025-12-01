@@ -8,6 +8,8 @@ class GameRankingActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        supportActionBar?.hide()
         setContentView(R.layout.activity_game_ranking)
 
         if (savedInstanceState == null) {
