@@ -47,7 +47,7 @@ class FirestoreFriendStorage {
 
             val friendSnap = when {
                 looksLikeEmail(trimmed) -> {
-                    // 用 email 查
+                    // Use email to query
                     val q = usersCol()
                         .whereEqualTo("email", trimmed)
                         .limit(1)
@@ -59,7 +59,7 @@ class FirestoreFriendStorage {
                     q.documents.first()
                 }
                 looksLikeNumericUid(trimmed) -> {
-                    // NEW: 用 numericUid 查（10 位 public id）
+                    // Use numeric Uid to query
                     val q = usersCol()
                         .whereEqualTo("numericUid", trimmed)
                         .limit(1)
@@ -71,7 +71,6 @@ class FirestoreFriendStorage {
                     q.documents.first()
                 }
                 else -> {
-                    // 兜底：当成内部 firebase uid 查
                     val doc = userDoc(trimmed).get().await()
                     if (!doc.exists()) {
                         throw Exception("Doesn't find any user with this UID")

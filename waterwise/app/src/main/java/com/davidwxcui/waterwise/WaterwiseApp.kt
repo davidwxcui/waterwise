@@ -11,8 +11,7 @@ class WaterwiseApp : Application() {
         val db = FirebaseFirestore.getInstance()
 
         val settings = FirebaseFirestoreSettings.Builder()
-            .setPersistenceEnabled(true) // 开启离线缓存
-            // .setCacheSizeBytes(FirebaseFirestoreSettings.CACHE_SIZE_UNLIMITED) // 如需无限缓存再打开
+            .setPersistenceEnabled(true)
             .build()
 
         db.firestoreSettings = settings

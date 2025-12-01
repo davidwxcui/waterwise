@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -11,6 +12,7 @@ import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import com.bumptech.glide.Glide
 import com.davidwxcui.waterwise.R
 import com.davidwxcui.waterwise.databinding.FragmentProfileBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -82,8 +84,7 @@ class ProfileFragment : Fragment() {
     }
 
     private fun render(p: Profile) {
-        binding.tvAvatarInitial.text =
-            (p.name.firstOrNull() ?: 'U').uppercaseChar().toString()
+        showAvatar(p)
 
         binding.tvName.text = p.name
         binding.tvEmail.text = p.email
@@ -110,8 +111,36 @@ class ProfileFragment : Fragment() {
         )
         binding.tvGoal.text = if (p.weightKg == 0) "—" else "${goal}ml"
 
-        // NEW: 显示 public id（numericUid），不再用 LocalAuthRepository 的 uid
+        // Show public Id or numeric ID
         loadPublicId()
+    }
+
+    private fun showAvatar(p: Profile) {
+        val initialChar = (p.name.firstOrNull() ?: 'U').uppercaseChar()
+        binding.tvAvatarInitial.text = initialChar.toString()
+
+        val avatarStr = p.avatarUri
+        if (avatarStr.isNullOrBlank()) {
+            binding.ivAvatar.visibility = View.GONE
+            binding.tvAvatarInitial.visibility = View.VISIBLE
+            return
+        }
+
+        val uri = try {
+            Uri.parse(avatarStr)
+        } catch (_: Exception) {
+            binding.ivAvatar.visibility = View.GONE
+            binding.tvAvatarInitial.visibility = View.VISIBLE
+            return
+        }
+
+        binding.ivAvatar.visibility = View.VISIBLE
+        binding.tvAvatarInitial.visibility = View.GONE
+
+        Glide.with(this)
+            .load(uri)
+            .circleCrop()
+            .into(binding.ivAvatar)
     }
 
     // load user numeric id
@@ -173,5 +202,8 @@ class ProfileFragment : Fragment() {
             .show()
     }
 
-    override fun onDestroyView() { _binding = null; super.onDestroyView() }
+    override fun onDestroyView() {
+        _binding = null
+        super.onDestroyView()
+    }
 }

@@ -198,7 +198,7 @@ class HomeFragment : Fragment() {
             .show()
     }
 
-    // 容量选择
+    // Quantity Choose
     private fun showQuantityDialog(type: DrinkType) {
         val options = vm.defaultPortionsFor(type)
         val labels = (options.map { "${it} ml" } +
@@ -223,7 +223,7 @@ class HomeFragment : Fragment() {
             .show()
     }
 
-    // 自定义容量输入
+    // Custom Input
     private fun showCustomInput(type: DrinkType) {
         val input = EditText(requireContext()).apply {
             inputType = InputType.TYPE_CLASS_NUMBER

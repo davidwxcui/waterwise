@@ -20,9 +20,12 @@ import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.bumptech.glide.Glide
 import com.davidwxcui.waterwise.R
 import com.davidwxcui.waterwise.databinding.FragmentEditProfileBinding
+import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.io.File
 
 class EditProfileFragment : Fragment() {
@@ -31,6 +34,7 @@ class EditProfileFragment : Fragment() {
 
     private var cameraTempUri: Uri? = null
     private var selectedAvatarUri: Uri? = null
+    private var newAvatarLocalUri: Uri? = null
 
     private val takePicture =
         registerForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
@@ -91,14 +95,16 @@ class EditProfileFragment : Fragment() {
             if (raw.isBlank()) return@let null
             try {
                 val uri = Uri.parse(raw)
-                try {
-                    requireContext().contentResolver.openInputStream(uri)?.close()
-                } catch (se: SecurityException) {
-                    Log.w("EditProfileFragment", "No permission for saved avatar uri, clearing", se)
-                    return@let null
-                } catch (e: Exception) {
-                    Log.w("EditProfileFragment", "Cannot open saved avatar uri, clearing", e)
-                    return@let null
+                if (uri.scheme == "content" || uri.scheme == "file") {
+                    try {
+                        requireContext().contentResolver.openInputStream(uri)?.close()
+                    } catch (se: SecurityException) {
+                        Log.w("EditProfileFragment", "No permission for saved avatar uri, clearing", se)
+                        return@let null
+                    } catch (e: Exception) {
+                        Log.w("EditProfileFragment", "Cannot open saved avatar uri, clearing", e)
+                        return@let null
+                    }
                 }
                 uri
             } catch (e: Exception) {
@@ -150,7 +156,7 @@ class EditProfileFragment : Fragment() {
         }
         binding.spActivityFreq.setSelection(freqIndex)
 
-        // Change Avatar if no picture
+        // Name / Email check
         binding.etName.doAfterTextChanged {
             if (selectedAvatarUri == null) {
                 val ch = it?.firstOrNull()?.uppercaseChar() ?: 'A'
@@ -276,7 +282,7 @@ class EditProfileFragment : Fragment() {
         }
         val freq = binding.spActivityFreq.selectedItem?.toString() ?: cur.activityFreqLabel
 
-        val pf = Profile(
+        val baseProfile = Profile(
             name = name,
             email = email,
             age = age,
@@ -285,13 +291,14 @@ class EditProfileFragment : Fragment() {
             weightKg = weight,
             activity = act,
             activityFreqLabel = freq,
-            avatarUri = selectedAvatarUri?.toString()
+            avatarUri = cur.avatarUri
         )
-
-        ProfilePrefs.save(requireContext(), pf)
 
         val uid = FirebaseAuthRepository.currentUid()
         if (uid.isNullOrBlank()) {
+            val localAvatarStr = newAvatarLocalUri?.toString() ?: cur.avatarUri
+            val localProfile = baseProfile.copy(avatarUri = localAvatarStr)
+            ProfilePrefs.save(requireContext(), localProfile)
             toast("Saved locally (not logged in)")
             findNavController().popBackStack()
             return
@@ -301,7 +308,28 @@ class EditProfileFragment : Fragment() {
 
         lifecycleScope.launch {
             try {
-                val res = FirebaseAuthRepository.updateProfile(requireContext(), uid, pf)
+                var finalProfile = baseProfile
+                val sourceUri: Uri? = when {
+                    newAvatarLocalUri != null -> newAvatarLocalUri
+                    !cur.avatarUri.isNullOrBlank() -> {
+                        val old = try { Uri.parse(cur.avatarUri) } catch (e: Exception) { null }
+                        if (old != null && (old.scheme == "content" || old.scheme == "file")) old else null
+                    }
+                    else -> null
+                }
+
+                if (sourceUri != null) {
+                    val uploadedUrl = uploadAvatarToFirebase(uid, sourceUri)
+                    finalProfile = if (uploadedUrl != null) {
+                        baseProfile.copy(avatarUri = uploadedUrl)
+                    } else {
+                        baseProfile.copy(avatarUri = sourceUri.toString())
+                    }
+                }
+
+                ProfilePrefs.save(requireContext(), finalProfile)
+
+                val res = FirebaseAuthRepository.updateProfile(requireContext(), uid, finalProfile)
                 binding.btnSave.isEnabled = true
 
                 if (res.isSuccess) {
@@ -317,6 +345,23 @@ class EditProfileFragment : Fragment() {
                 toast("Sync failed, saved locally")
                 findNavController().popBackStack()
             }
+        }
+    }
+
+    // Upload to Firebase Storage，return URL（if fail return null）
+    private suspend fun uploadAvatarToFirebase(uid: String, uri: Uri): String? {
+        return try {
+            val storageRef = FirebaseStorage.getInstance()
+                .reference
+                .child("avatars/$uid.jpg")
+
+            storageRef.putFile(uri).await()
+            val url = storageRef.downloadUrl.await().toString()
+            Log.d("EditProfileFragment", "Avatar uploaded: $url")
+            url
+        } catch (e: Exception) {
+            Log.e("EditProfileFragment", "uploadAvatarToFirebase failed", e)
+            null
         }
     }
 
@@ -341,14 +386,24 @@ class EditProfileFragment : Fragment() {
 
     private fun setAvatar(uri: Uri?) {
         selectedAvatarUri = uri
+        newAvatarLocalUri = uri
         showAvatar(uri)
     }
 
     private fun showAvatar(uri: Uri?) {
         if (uri != null) {
-            binding.ivAvatar.setImageURI(uri)
             binding.ivAvatar.visibility = View.VISIBLE
             binding.tvAvatarBigInitial.visibility = View.GONE
+
+            try {
+                Glide.with(this)
+                    .load(uri)
+                    .circleCrop()
+                    .into(binding.ivAvatar)
+            } catch (e: Exception) {
+                Log.w("EditProfileFragment", "Glide failed, fallback to setImageURI", e)
+                binding.ivAvatar.setImageURI(uri)
+            }
         } else {
             binding.ivAvatar.setImageDrawable(null)
             binding.ivAvatar.visibility = View.GONE
