@@ -101,6 +101,9 @@ class ProfileFragment : Fragment() {
 
         // Hide Reset Goal button when not logged in
         binding.btnResetGoal.isVisible = loggedIn
+
+        // Hide Drink Reminder card when not logged in
+        binding.cardReminderSection.isVisible = loggedIn
     }
 
     private fun profileForUi(): Profile {
