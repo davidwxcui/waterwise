@@ -1611,9 +1611,31 @@ class GameActivity : AppCompatActivity() {
             .collection(MEMBERS_SUBCOLLECTION)
             .document(uid)
             .set(data)
+            .addOnSuccessListener {
+                updateHighestCoinsIfNeeded(playerState.coins)
+            }
             .addOnFailureListener {
                 Toast.makeText(this, "Failed to save player: ${it.message}", Toast.LENGTH_SHORT)
                     .show()
+            }
+    }
+
+
+    private fun updateHighestCoinsIfNeeded(currentCoins: Int) {
+        val userDocRef = firestore.collection("users")
+            .document(uid)
+
+        userDocRef.get()
+            .addOnSuccessListener { snap ->
+                val highest = snap.getLong("highestcoins") ?: 0L
+                if (currentCoins > highest) {
+                    val data = hashMapOf(
+                        "highestcoins" to currentCoins
+                    )
+                    userDocRef.set(data, SetOptions.merge())
+                }
+            }
+            .addOnFailureListener {
             }
     }
 
