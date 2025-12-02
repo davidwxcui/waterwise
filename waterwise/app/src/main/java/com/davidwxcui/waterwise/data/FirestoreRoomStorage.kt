@@ -94,7 +94,6 @@ class FirestoreRoomStorage {
                             mapOf(
                                 "uid" to hostUid,
                                 "joinedAt" to System.currentTimeMillis(),
-                                "coins" to 1000L
                             )
                         )
 
@@ -157,7 +156,6 @@ class FirestoreRoomStorage {
                         mapOf(
                             "uid" to uid,
                             "joinedAt" to System.currentTimeMillis(),
-                            "coins" to 1000L
                         )
                     )
                     tx.update(roomRef, "memberCount", FieldValue.increment(1))
@@ -272,7 +270,6 @@ class FirestoreRoomStorage {
         return try {
             val membersSnap = membersCol(roomId).get().await()
             val members = membersSnap.documents.mapNotNull { it.getString("uid") }
-            val coinsByUid = members.associateWith { 1000L }
 
             db.runTransaction { tx ->
                 val roomRef = roomDoc(roomId)
@@ -285,7 +282,6 @@ class FirestoreRoomStorage {
                     mapOf(
                         "startedAt" to System.currentTimeMillis(),
                         "turnIndex" to 0L,
-                        "coinsByUid" to coinsByUid
                     )
                 )
 
@@ -345,7 +341,6 @@ class FirestoreRoomStorage {
                     Member(
                         uid = uid,
                         joinedAt = getLongSafe(d.get("joinedAt")),
-                        coins = getLongSafe(d.get("coins"))
                     )
                 }
                 onUpdate(list)

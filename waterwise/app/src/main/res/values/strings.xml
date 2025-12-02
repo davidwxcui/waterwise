@@ -56,6 +56,10 @@
 
     <!-- Content descriptions -->
     <string name="content_desc_go_back">Go back</string>
+
+    <string name="title_game">Water Monopoly</string>
+
+    <string name="title_match">Water Drinking Monopoly Matching</string>
     <string name="back">Back</string>
 
     <!-- Drink Reminder -->

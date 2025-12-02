@@ -19,6 +19,7 @@ import com.davidwxcui.waterwise.data.DrinkLog
 import com.davidwxcui.waterwise.data.DrinkType
 import com.davidwxcui.waterwise.databinding.FragmentHomeBinding
 import com.davidwxcui.waterwise.minigame.GameActivity
+import com.davidwxcui.waterwise.minigame.RoomMatchActivity
 import com.davidwxcui.waterwise.ui.profile.LocalAuthRepository
 import com.davidwxcui.waterwise.ui.profile.ProfilePrefs
 import java.time.LocalDateTime
@@ -178,7 +179,7 @@ class HomeFragment : Fragment() {
             )
         }
         binding.btnGame.setOnClickListener {
-            startActivity(Intent(requireContext(), GameActivity::class.java))
+            startActivity(Intent(requireContext(), RoomMatchActivity::class.java))
         }
 
         binding.btnFriends.setOnClickListener {
