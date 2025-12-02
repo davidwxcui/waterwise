@@ -182,7 +182,9 @@ class HomeFragment : Fragment() {
         binding.btnRanking.setOnClickListener {
             findNavController().navigate(R.id.navigation_user_ranking)
         }
-
+        binding.btnFriends.setOnClickListener {
+            findNavController().navigate(R.id.friendsFragment)
+        }
     }
 
     // FAB 调用：选择饮品类型
