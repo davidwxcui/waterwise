@@ -30,9 +30,9 @@ private lateinit var btnGameRanking: ImageButton
 // ================== DATA MODELS ==================
 
 data class PlayerState(
-    val coins: Int = 10000,
+    val coins: Int = 50000,
     val position: Int = 0,
-    val diceLeft: Int = 0,
+    val diceLeft: Int = 10,
     val ownedProperties: List<String> = emptyList()
 )
 
@@ -1460,9 +1460,9 @@ class GameActivity : AppCompatActivity() {
         saveRoomBoard()
 
         playerState = PlayerState(
-            coins = 10000,
+            coins = 50000,
             position = 0,
-            diceLeft = 0,
+            diceLeft = 10,
             ownedProperties = emptyList()
         )
         updateUI()
@@ -1522,9 +1522,9 @@ class GameActivity : AppCompatActivity() {
                 .await()
 
             if (playerSnap.exists()) {
-                val coins = playerSnap.getLong("coins")?.toInt() ?: 10000
+                val coins = playerSnap.getLong("coins")?.toInt() ?: 50000
                 val position = playerSnap.getLong("position")?.toInt() ?: 0
-                val diceLeft = playerSnap.getLong("diceLeft")?.toInt() ?: 0
+                val diceLeft = playerSnap.getLong("diceLeft")?.toInt() ?: 10
                 val ownedPropsAny = playerSnap.get("ownedProperties") as? List<*>
                 val ownedProps = ownedPropsAny?.mapNotNull { it as? String } ?: emptyList()
 
@@ -1627,13 +1627,10 @@ class GameActivity : AppCompatActivity() {
 
         userDocRef.get()
             .addOnSuccessListener { snap ->
-                val highest = snap.getLong("highestcoins") ?: 0L
-                if (currentCoins > highest) {
-                    val data = hashMapOf(
-                        "highestcoins" to currentCoins
-                    )
-                    userDocRef.set(data, SetOptions.merge())
-                }
+                val data = hashMapOf(
+                    "highestcoins" to currentCoins
+                )
+                userDocRef.set(data, SetOptions.merge())
             }
             .addOnFailureListener {
             }
