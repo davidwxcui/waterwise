@@ -19,7 +19,8 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-
+import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.FieldPath
 class GameRankingFragment : Fragment() {
 
     private var _binding: FragmentGameRankingBinding? = null
@@ -183,54 +184,61 @@ class GameRankingFragment : Fragment() {
     }
 
     /**
-     * 全局排行榜（暂时还是用 games/{uid}.coins，这部分你以后可以按需要调整）
+     * 全局排行榜：直接从 games 集合里按 coins 排序，取前 10 个
      */
     private suspend fun loadGlobalRanking(myUid: String): List<GameRankingUI> {
 
-        // 1. 取一批用户（这里先限制 20 个）
-        val usersSnap = firestore.collection("users")
-            .limit(20)
+        // 1. 先在 games 里按 coins 降序取前 10 条
+        val gameSnap = firestore.collection("games")
+            .orderBy("coins", Query.Direction.DESCENDING)  // 按 coins 排序
+            .limit(10)                                     // 只要前 10 个
             .get()
             .await()
 
-        val tmp = mutableListOf<GameRankingUI>()
+        if (gameSnap.isEmpty) return emptyList()
 
-        // 2. 对每个用户去 games/{uid} 里读 coins（没有就 0）
-        for (userDoc in usersSnap.documents) {
-            val uid = userDoc.id
+        val result = mutableListOf<GameRankingUI>()
 
-            val name =
-                userDoc.getString("name")
-                    ?: userDoc.getString("displayName")
-                    ?: uid
+        // 2. 对每个玩家再去 users 里拿 name / avatar
+        gameSnap.documents.forEachIndexed { index, gameDoc ->
+            val uid = gameDoc.id
+            val coins = gameDoc.getLong("coins") ?: 0L
 
-            val avatarUrl = userDoc.getString("avatarUri")
+            // 这里可以选择跳过 0 coin 的
+            // if (coins <= 0L) return@forEachIndexed
 
-            val gameDoc = firestore.collection("games")
-                .document(uid)
-                .get()
-                .await()
+            val userSnap = try {
+                firestore.collection("users")
+                    .document(uid)
+                    .get()
+                    .await()
+            } catch (_: Exception) {
+                null
+            }
 
-            val coins = gameDoc.getLong("coins") ?: 0L   // 没有 coins 字段就当 0
+            val name = when {
+                userSnap != null && userSnap.exists() ->
+                    userSnap.getString("name")
+                        ?: userSnap.getString("displayName")
+                        ?: uid
+                else -> uid
+            }
 
-            tmp += GameRankingUI(
+            val avatarUrl = userSnap?.getString("avatarUri")
+
+            result += GameRankingUI(
                 uid = uid,
                 name = name,
                 coins = coins,
-                rank = 0,                 // 先占位，后面统一写 rank
+                rank = index + 1,      // 这里已经是排好序的，直接用 index+1 当名次
                 isMe = (uid == myUid),
                 avatarUrl = avatarUrl
             )
         }
 
-        // 3. 按 coins DESC 排序，只保留前 10 个并写入 rank
-        return tmp
-            .sortedByDescending { it.coins }
-            .take(10)
-            .mapIndexed { index, item ->
-                item.copy(rank = index + 1)
-            }
+        return result
     }
+
 
     /**
      * Room 排行榜：当前房间 rooms/<roomId>/members 下的所有玩家，按 coins 排序

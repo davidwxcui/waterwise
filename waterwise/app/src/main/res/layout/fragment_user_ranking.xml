@@ -6,7 +6,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:background="@android:color/white">
+    android:background="@android:color/white"
+    android:paddingTop="24dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -14,7 +15,6 @@
         android:orientation="vertical"
         android:padding="20dp">
 
-        <!-- 整个排行榜的大卡片，样式跟 Personal Information 一样 -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/rankingCard"
             android:layout_width="match_parent"
@@ -28,7 +28,6 @@
                 android:orientation="vertical"
                 android:padding="16dp">
 
-                <!-- 顶部标题行 -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -36,7 +35,6 @@
                     android:gravity="center_vertical"
                     android:layout_marginBottom="16dp">
 
-                    <!-- 返回按钮 -->
                     <ImageButton
                         android:id="@+id/btnBackRanking"
                         android:layout_width="32dp"
@@ -45,7 +43,6 @@
                         android:src="@android:drawable/ic_media_previous"
                         android:contentDescription="Back" />
 
-                    <!-- 标题 -->
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -56,7 +53,6 @@
                         android:textStyle="bold"
                         android:textColor="#1E2A3A" />
 
-                    <!-- 排行榜图标 -->
                     <ImageView
                         android:id="@+id/rankingIcon"
                         android:layout_width="28dp"
@@ -65,7 +61,6 @@
                         android:contentDescription="Ranking icon" />
                 </LinearLayout>
 
-                <!-- 副标题 -->
                 <TextView
                     android:id="@+id/rankingSubtitle"
                     android:layout_width="wrap_content"
@@ -75,7 +70,6 @@
                     android:textColor="#7A8A9A"
                     android:layout_marginBottom="12dp" />
 
-                <!-- 我的排名小卡片 -->
                 <LinearLayout
                     android:id="@+id/myRankCard"
                     android:layout_width="match_parent"
@@ -86,7 +80,6 @@
                     android:gravity="center_vertical"
                     android:layout_marginBottom="16dp">
 
-                    <!-- 排名号 -->
                     <TextView
                         android:id="@+id/myRankNumber"
                         android:layout_width="wrap_content"
@@ -96,7 +89,6 @@
                         android:textStyle="bold"
                         android:textColor="#1E2A3A" />
 
-                    <!-- ID + 今日喝水 -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -122,7 +114,6 @@
                             android:textSize="13sp" />
                     </LinearLayout>
 
-                    <!-- 完成百分比 -->
                     <TextView
                         android:id="@+id/myPercent"
                         android:layout_width="wrap_content"
@@ -133,7 +124,6 @@
                         android:textColor="#1E2A3A" />
                 </LinearLayout>
 
-                <!-- 时间范围 Tabs -->
                 <LinearLayout
                     android:id="@+id/rangeTabs"
                     android:layout_width="match_parent"
@@ -174,7 +164,6 @@
                         android:padding="8dp" />
                 </LinearLayout>
 
-                <!-- Friends leaderboard title -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -185,7 +174,6 @@
                     android:layout_marginTop="4dp"
                     android:layout_marginBottom="4dp" />
 
-                <!-- 空数据提示 -->
                 <TextView
                     android:id="@+id/rankingEmpty"
                     android:layout_width="match_parent"
@@ -196,7 +184,6 @@
                     android:padding="8dp"
                     android:visibility="gone" />
 
-                <!-- 排行列表 -->
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rankingList"
                     android:layout_width="match_parent"
@@ -207,7 +194,6 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- 底部留点空白，避免被导航栏挡住 -->
         <Space
             android:layout_width="match_parent"
             android:layout_height="32dp"/>
