@@ -283,6 +283,9 @@ class GameActivity : AppCompatActivity() {
             R.id.menu_player_colors -> {
                 showPlayerColorsDialog(); true
             }
+            R.id.menu_how_to_play -> {
+                showHowToPlayDialog(); true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }
@@ -417,6 +420,32 @@ class GameActivity : AppCompatActivity() {
             dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
         }
     }
+
+
+
+    private fun showHowToPlayDialog() {
+        val msg = """
+        • Each player starts with 50,000 coins and 10 dice.
+        • Tap "Roll dice" to move forward on the outer ring of the board.
+        • When you land on a property tile:
+          - If nobody owns it, you can buy it and get income every turn.
+          - If you land on your own property, nothing happens.
+          - If you land on someone else's property, you must pay rent.
+        • When you land on a random event tile, choose one of the options and the result will
+          add or subtract coins based on the success rate.
+        • At the end of each turn you also get income from all properties you own.
+        • If your coins drop below 0, you go bankrupt and will automatically leave the room.
+        • Every day you can receive extra dice based on how much water you drank yesterday.
+    """.trimIndent()
+
+        showGameMessageDialog(
+            iconRes = R.drawable.ic_dice,
+            title = "How to Play",
+            message = msg
+        )
+    }
+
+
 
 
 
