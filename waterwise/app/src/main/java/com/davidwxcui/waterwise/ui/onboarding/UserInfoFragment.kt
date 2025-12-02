@@ -39,7 +39,11 @@ class UserInfoFragment : Fragment() {
             viewModel.setUserInfo(name)
 
             // Navigate to gender selection
-            findNavController().navigate(R.id.action_userInfo_to_gender)
+            // Note: This fragment is currently not used in the navigation flow.
+            // The app goes directly from Welcome -> Gender, skipping user info.
+            // If you want to re-enable this fragment, add it back to onboarding_navigation.xml
+            // and create the action: action_userInfo_to_gender
+            findNavController().navigate(R.id.genderFragment)
         }
     }
 

@@ -9,6 +9,8 @@ import com.davidwxcui.waterwise.data.models.*
 import com.davidwxcui.waterwise.ui.profile.HydrationFormula
 import com.davidwxcui.waterwise.ui.profile.ActivityLevel
 import com.davidwxcui.waterwise.ui.profile.Sex
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 class OnboardingViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -108,18 +110,19 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
         // Load existing profile to get name and email from registration
         val existingProfile = com.davidwxcui.waterwise.ui.profile.ProfilePrefs.load(context)
 
+        // Convert onboarding data to proper types
         val weightKg = userProfile.weight?.let {
             userProfile.weightUnit.toKg(it).toInt()
-        } ?: 70
+        } ?: existingProfile.weightKg  // Use existing weight if not set
 
         val heightCm = userProfile.height?.let {
             userProfile.heightUnit.toCm(it).toInt()
-        } ?: 170
+        } ?: existingProfile.heightCm  // Use existing height if not set
 
         val sex = when (userProfile.gender) {
             Gender.MALE -> com.davidwxcui.waterwise.ui.profile.Sex.MALE
             Gender.FEMALE -> com.davidwxcui.waterwise.ui.profile.Sex.FEMALE
-            else -> com.davidwxcui.waterwise.ui.profile.Sex.UNSPECIFIED
+            else -> existingProfile.sex  // Keep existing if not set
         }
 
         val activityLevel = when (userProfile.trainingFrequency) {
@@ -127,12 +130,12 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
             TrainingFrequency.LOW -> com.davidwxcui.waterwise.ui.profile.ActivityLevel.LIGHT
             TrainingFrequency.MEDIUM -> com.davidwxcui.waterwise.ui.profile.ActivityLevel.MODERATE
             TrainingFrequency.HIGH -> com.davidwxcui.waterwise.ui.profile.ActivityLevel.ACTIVE
-            else -> com.davidwxcui.waterwise.ui.profile.ActivityLevel.MODERATE
+            null -> existingProfile.activity  // Keep existing if not set
         }
 
-        val activityFreqLabel = userProfile.trainingFrequency?.daysPerWeek ?: "3-5 days/week"
+        val activityFreqLabel = userProfile.trainingFrequency?.daysPerWeek ?: existingProfile.activityFreqLabel
 
-        // Create Profile object and save to ProfilePrefs, preserving name and email from registration
+        // Create Profile object with actual onboarding data, preserving name and email from registration
         val profile = com.davidwxcui.waterwise.ui.profile.Profile(
             name = existingProfile.name,
             email = existingProfile.email,
@@ -143,7 +146,27 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
             activity = activityLevel,
             activityFreqLabel = activityFreqLabel
         )
+
+        // Save to ProfilePrefs
         com.davidwxcui.waterwise.ui.profile.ProfilePrefs.save(context, profile)
+
+        // Also save to Firestore if logged in
+        val uid = com.davidwxcui.waterwise.ui.profile.FirebaseAuthRepository.currentUid()
+        if (uid != null) {
+            // Launch coroutine to save to Firestore asynchronously
+            kotlinx.coroutines.GlobalScope.launch {
+                try {
+                    com.davidwxcui.waterwise.ui.profile.FirebaseAuthRepository.updateProfile(
+                        context,
+                        uid,
+                        profile
+                    )
+                } catch (e: Exception) {
+                    // Log error but don't crash
+                    android.util.Log.e("OnboardingViewModel", "Failed to save profile to Firestore", e)
+                }
+            }
+        }
     }
 
     fun nextStep() {

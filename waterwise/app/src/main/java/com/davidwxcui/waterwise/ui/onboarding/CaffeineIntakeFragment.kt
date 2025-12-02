@@ -29,6 +29,10 @@ class CaffeineIntakeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        binding.btnBack.setOnClickListener {
+            findNavController().navigateUp()
+        }
+
         binding.btnAlmostNever.setOnClickListener {
             viewModel.setCaffeineIntake(IntakeFrequency.ALMOST_NEVER)
             findNavController().navigate(R.id.action_caffeine_to_vegetables)
