@@ -15,6 +15,7 @@ import com.davidwxcui.waterwise.R
 import com.davidwxcui.waterwise.databinding.FragmentProfileBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
+import com.google.firebase.firestore.FirebaseFirestore
 
 class ProfileFragment : Fragment() {
 
@@ -57,6 +58,7 @@ class ProfileFragment : Fragment() {
         binding.btnLogout.isVisible = loggedIn
         binding.btnLogout.setOnClickListener {
             LocalAuthRepository.logout(requireContext())
+            FirebaseAuthRepository.logout()
             render(profileForUi())
             setupAuthButtons()
             Snackbar.make(binding.root, "Logged out", Snackbar.LENGTH_SHORT).show()
@@ -108,17 +110,45 @@ class ProfileFragment : Fragment() {
         )
         binding.tvGoal.text = if (p.weightKg == 0) "—" else "${goal}ml"
 
-        val uid = if (LocalAuthRepository.isLoggedIn(requireContext()))
-            LocalAuthRepository.getUid(requireContext())
-        else null
+        // NEW: 显示 public id（numericUid），不再用 LocalAuthRepository 的 uid
+        loadPublicId()
+    }
 
-        binding.tvUid.text = uid?.let { "UID: $it" } ?: "UID: —"
-        binding.btnCopyUid.isVisible = !uid.isNullOrBlank()
-        binding.btnCopyUid.setOnClickListener {
-            val cm = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            cm.setPrimaryClip(ClipData.newPlainText("uid", uid))
-            Snackbar.make(binding.root, "UID copied", Snackbar.LENGTH_SHORT).show()
+    // load user numeric id
+    private fun loadPublicId() {
+        val firebaseUid = FirebaseAuthRepository.currentUid()
+        if (firebaseUid == null) {
+            binding.tvUid.text = "ID: —"
+            binding.btnCopyUid.isVisible = false
+            return
         }
+
+        val db = FirebaseFirestore.getInstance()
+        db.collection("users").document(firebaseUid)
+            .get()
+            .addOnSuccessListener { snap ->
+                if (!isAdded) return@addOnSuccessListener
+
+                val numeric = snap.getString("numericUid")
+                if (numeric.isNullOrBlank()) {
+                    binding.tvUid.text = "ID: —"
+                    binding.btnCopyUid.isVisible = false
+                } else {
+                    binding.tvUid.text = "ID: $numeric"
+                    binding.btnCopyUid.isVisible = true
+                    binding.btnCopyUid.setOnClickListener {
+                        val cm = requireContext()
+                            .getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        cm.setPrimaryClip(ClipData.newPlainText("uid", numeric))
+                        Snackbar.make(binding.root, "ID copied", Snackbar.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .addOnFailureListener {
+                if (!isAdded) return@addOnFailureListener
+                binding.tvUid.text = "ID: —"
+                binding.btnCopyUid.isVisible = false
+            }
     }
 
     private fun resetDailyGoal() {

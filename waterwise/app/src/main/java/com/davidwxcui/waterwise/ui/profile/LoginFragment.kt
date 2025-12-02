@@ -22,6 +22,10 @@ class LoginFragment : Fragment() {
     private var _binding: FragmentLoginBinding? = null
     private val binding get() = _binding!!
 
+    // Check User is leave
+    private var emailTouched = false
+    private var pwTouched = false
+
     // backend
     private val api: AuthApi = FirebaseAuthRepository
 
@@ -38,28 +42,77 @@ class LoginFragment : Fragment() {
         binding.tvAvatarInitial.text = (local.name.firstOrNull() ?: 'U')
             .uppercaseChar().toString()
 
-        // Real-time validation
-        fun validateInputs(): Boolean {
+        fun clearInlineError() {
+            binding.tvLoginError.text = ""
+            binding.tvLoginError.visibility = View.GONE
+        }
+
+        fun validateEmail(showError: Boolean): Boolean {
             val email = binding.etEmail.text?.toString()?.trim()?.lowercase().orEmpty()
-            val pw = binding.etPassword.text?.toString()?.trim().orEmpty()
-
-            val emailOk = Patterns.EMAIL_ADDRESS.matcher(email).matches()
-            val pwOk = pw.length >= 8 && !pw.contains(" ")
-            binding.etEmail.error = if (emailOk) null else "Invalid email"
-            binding.etPassword.error = if (pwOk) null else "Min 8 chars, no spaces"
-
-            val ok = emailOk && pwOk
-            binding.btnLogin.isEnabled = ok
+            val ok = Patterns.EMAIL_ADDRESS.matcher(email).matches()
+            if (ok) {
+                binding.etEmail.error = null
+            } else if (showError) {
+                binding.etEmail.error = "Invalid email"
+            }
             return ok
         }
 
-        binding.etEmail.doAfterTextChanged { validateInputs() }
-        binding.etPassword.doAfterTextChanged { validateInputs() }
-        validateInputs()
+        fun validatePassword(showError: Boolean): Boolean {
+            val pw = binding.etPassword.text?.toString()?.trim().orEmpty()
+            val okLen = pw.length >= 8
+            val okNoSpace = !pw.contains(" ")
+            val ok = okLen && okNoSpace
+            if (ok) {
+                binding.etPassword.error = null
+            } else if (showError) {
+                binding.etPassword.error = "Min 8 chars, no spaces"
+            }
+            return ok
+        }
+
+        fun updateLoginEnabled() {
+            val emailOk = validateEmail(false)
+            val pwOk = validatePassword(false)
+            binding.btnLogin.isEnabled = emailOk && pwOk
+        }
+
+        binding.etEmail.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                emailTouched = true
+                validateEmail(true)
+            }
+        }
+        binding.etPassword.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                pwTouched = true
+                validatePassword(true)
+            }
+        }
+
+        binding.etEmail.doAfterTextChanged {
+            clearInlineError()
+            validateEmail(emailTouched)
+            updateLoginEnabled()
+        }
+        binding.etPassword.doAfterTextChanged {
+            clearInlineError()
+            validatePassword(pwTouched)
+            updateLoginEnabled()
+        }
+
+        updateLoginEnabled()
 
         // Login click
         binding.btnLogin.setOnClickListener {
-            if (!validateInputs()) {
+            clearInlineError()
+
+            emailTouched = true
+            pwTouched = true
+
+            val emailValid = validateEmail(true)
+            val pwValid = validatePassword(true)
+            if (!emailValid || !pwValid) {
                 Snackbar.make(binding.root, "Please fix errors", Snackbar.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
@@ -73,7 +126,10 @@ class LoginFragment : Fragment() {
             val now = System.currentTimeMillis()
             if (now < lockUntil) {
                 val secLeft = ceil((lockUntil - now) / 1000.0).toInt()
-                Snackbar.make(binding.root, "Too many attempts. Try again in ${secLeft}s", Snackbar.LENGTH_SHORT).show()
+                val msg = "Too many attempts. Try again in ${secLeft}s"
+                binding.tvLoginError.text = msg
+                binding.tvLoginError.visibility = View.VISIBLE
+                Snackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -99,17 +155,33 @@ class LoginFragment : Fragment() {
                     val fail = sp.getInt(KEY_FAIL_COUNT, 0) + 1
                     val editor = sp.edit().putInt(KEY_FAIL_COUNT, fail)
                     if (fail >= 5) {
+                        // If fail over 5 times 30 seconds frozen
                         editor.putLong(KEY_LOCK_UNTIL, System.currentTimeMillis() + 30_000L)
                             .putInt(KEY_FAIL_COUNT, 0)
                             .apply()
-                        Snackbar.make(binding.root, "Locked for 30s after 5 failures", Snackbar.LENGTH_SHORT).show()
+                        val msg = "Locked for 30s after 5 failures"
+                        binding.tvLoginError.text = msg
+                        binding.tvLoginError.visibility = View.VISIBLE
+                        Snackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
                     } else {
                         editor.apply()
-                        Snackbar.make(
-                            binding.root,
-                            result.exceptionOrNull()?.message ?: "Login failed ($fail/5)",
-                            Snackbar.LENGTH_SHORT
-                        ).show()
+
+                        val rawMsg = result.exceptionOrNull()?.message.orEmpty()
+                        val inlineMsg =
+                            if (rawMsg.contains("password", true)
+                                || rawMsg.contains("record", true)
+                                || rawMsg.contains("email", true)
+                            ) {
+                                "Incorrect email or password"
+                            } else if (rawMsg.isNotBlank()) {
+                                rawMsg
+                            } else {
+                                "Login failed (${fail}/5)"
+                            }
+
+                        binding.tvLoginError.text = inlineMsg
+                        binding.tvLoginError.visibility = View.VISIBLE
+                        // 这里不再额外弹 Snackbar，错误就出现在密码框下方
                     }
                 }
                 binding.btnLogin.isEnabled = true

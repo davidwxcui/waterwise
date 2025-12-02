@@ -8,6 +8,7 @@ import androidx.navigation.ui.setupWithNavController
 import com.davidwxcui.waterwise.data.OnboardingPreferences
 import com.davidwxcui.waterwise.databinding.ActivityMainBinding
 import com.davidwxcui.waterwise.ui.onboarding.OnboardingActivity
+import com.davidwxcui.waterwise.ui.profile.FirebaseAuthRepository
 
 class MainActivity : AppCompatActivity() {
 
@@ -16,12 +17,13 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Check if onboarding is completed
+        // Check if user is logged in AND onboarding is not completed
         val onboardingPrefs = OnboardingPreferences(this)
-        if (!onboardingPrefs.isOnboardingCompleted()) {
-            // Redirect to onboarding
-            val intent = Intent(this, OnboardingActivity::class.java)
-            startActivity(intent)
+        val isLoggedIn = FirebaseAuthRepository.isLoggedIn()
+
+        if (isLoggedIn && !onboardingPrefs.isOnboardingCompleted()) {
+            // User is logged in but hasn't completed onboarding
+            startActivity(Intent(this, OnboardingActivity::class.java))
             finish()
             return
         }
@@ -31,20 +33,46 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Get NavController from the NavHostFragment
         val navHostFragment = supportFragmentManager
             .findFragmentById(R.id.nav_host_fragment_activity_main) as NavHostFragment
         val navController = navHostFragment.navController
 
-        // Connect BottomNavigationView to NavController
         binding.navView.setupWithNavController(navController)
 
-        // FAB action: only if current fragment is HomeFragment
-        binding.fabAdd.setOnClickListener {
-            val currentFragment = navHostFragment.childFragmentManager.fragments.firstOrNull()
-            if (currentFragment is com.davidwxcui.waterwise.ui.home.HomeFragment) {
-                currentFragment.showFabQuickAdd()
+        // When in  Friends / FriendRequests Page High light Home tab
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            when (destination.id) {
+                R.id.navigation_home,
+                R.id.friendsFragment,
+                R.id.friendRequestsFragment -> {
+                    binding.navView.menu.findItem(R.id.navigation_home).isChecked = true
+                }
             }
+        }
+
+        binding.fabAdd.setOnClickListener {
+            for (i in 0 until binding.navView.menu.size()) {
+                binding.navView.menu.getItem(i).isChecked = false
+            }
+
+            binding.fabAdd.setBackgroundColor(
+                android.graphics.Color.parseColor("#00ACC1")
+            )
+
+            binding.fabAdd.animate().apply {
+                scaleX(1.2f)
+                scaleY(1.2f)
+                duration = 100
+                withEndAction {
+                    binding.fabAdd.animate().apply {
+                        scaleX(1f)
+                        scaleY(1f)
+                        duration = 100
+                    }.start()
+                }
+            }.start()
+
+            navController.navigate(R.id.action_global_to_add)
         }
     }
 }

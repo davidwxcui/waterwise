@@ -5,12 +5,14 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.firestore.DocumentSnapshot
 import java.security.MessageDigest
 import java.util.UUID
 import java.util.UUID.randomUUID
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+import kotlinx.coroutines.tasks.await
 
 /**
  * Auth API placeholder.
@@ -23,9 +25,8 @@ interface AuthApi {
 
 data class AuthUser(val uid: String, val token: String)
 
-/**
- * Firebase auth implementation
- */
+// Firebase auth implementation
+
 object FirebaseAuthRepository : AuthApi {
 
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
@@ -63,10 +64,24 @@ object FirebaseAuthRepository : AuthApi {
             val uid = user.uid
             val token = user.fetchIdToken(false)
 
-            // Make sure Firestore has user file
             val local = ProfilePrefs.load(ctx).copy(email = email)
-            ProfilePrefs.save(ctx, local)
-            upsertUserProfile(uid, local)
+
+            val docRef = db.collection("users").document(uid)
+            val snap = try {
+                docRef.get().await()
+            } catch (e: Exception) {
+                null
+            }
+
+            if (snap != null && snap.exists()) {
+                val merged = mergeProfileFromSnapshot(snap, local)
+                ProfilePrefs.save(ctx, merged)
+
+                upsertUserProfile(uid, merged)
+            } else {
+                ProfilePrefs.save(ctx, local)
+                upsertUserProfile(uid, local)
+            }
 
             Result.success(AuthUser(uid, token))
         } catch (e: Exception) {
@@ -100,10 +115,106 @@ object FirebaseAuthRepository : AuthApi {
         auth.signOut()
     }
 
+    private fun mergeProfileFromSnapshot(
+        snap: DocumentSnapshot,
+        fallback: Profile
+    ): Profile {
+        val sexStr = snap.getString("sex")
+        val actStr = snap.getString("activityLevel")
+
+        val sex = try {
+            if (sexStr != null) Sex.valueOf(sexStr) else fallback.sex
+        } catch (_: Exception) {
+            fallback.sex
+        }
+
+        val activity = try {
+            if (actStr != null) ActivityLevel.valueOf(actStr) else fallback.activity
+        } catch (_: Exception) {
+            fallback.activity
+        }
+
+        return fallback.copy(
+            name = snap.getString("name") ?: fallback.name,
+            email = snap.getString("email") ?: fallback.email,
+            age = (snap.getLong("age") ?: fallback.age.toLong()).toInt(),
+            heightCm = (snap.getLong("heightCm") ?: fallback.heightCm.toLong()).toInt(),
+            weightKg = (snap.getLong("weightKg") ?: fallback.weightKg.toLong()).toInt(),
+            activityFreqLabel = snap.getString("activityFreqLabel") ?: fallback.activityFreqLabel,
+            avatarUri = snap.getString("avatarUri") ?: fallback.avatarUri,
+            sex = sex,
+            activity = activity
+        )
+    }
+
+    // 给用户分配 10 位数字 public id（numericUid）
+    private suspend fun ensureNumericUid(uid: String): String {
+        return db.runTransaction { tx ->
+            val userRef = db.collection("users").document(uid)
+            val userSnap = tx.get(userRef)
+            val existing = userSnap.getString("numericUid")
+            if (!existing.isNullOrBlank()) {
+                return@runTransaction existing
+            }
+
+            val poolRef = db.collection("meta").document("numericUidPool")
+            val poolSnap = tx.get(poolRef)
+
+            val lastMax = poolSnap.getLong("lastMax") ?: 1_000_000_000L
+
+            val rawList = poolSnap.get("available") as? List<*>
+            val available = rawList?.mapNotNull {
+                when (it) {
+                    is Number -> it.toLong()
+                    is String -> it.toLongOrNull()
+                    else -> null
+                }
+            }?.toMutableList() ?: mutableListOf()
+
+            val assigned: Long
+            val newLastMax: Long
+            val newAvailable: List<Long>
+
+            if (available.isEmpty()) {
+                val newStart = lastMax + 1L
+                val newEnd = lastMax + 100L
+
+                assigned = newStart
+                newLastMax = newEnd
+                newAvailable = (newStart + 1L..newEnd).toList()
+            } else {
+                assigned = available.first()
+                available.removeAt(0)
+                newLastMax = lastMax
+                newAvailable = available
+            }
+
+            tx.set(
+                poolRef,
+                mapOf(
+                    "lastMax" to newLastMax,
+                    "available" to newAvailable
+                ),
+                SetOptions.merge()
+            )
+
+            tx.set(
+                userRef,
+                mapOf("numericUid" to assigned.toString()),
+                SetOptions.merge()
+            )
+
+            assigned.toString()
+        }.await()
+    }
+
     // ---------- Firestore helpers ----------
     private suspend fun upsertUserProfile(uid: String, pf: Profile) {
+        val numericUid = ensureNumericUid(uid)  // 保证 public id 存在
+
         val data = hashMapOf(
             "uid" to uid,
+            "numericUid" to numericUid,
             "name" to pf.name,
             "email" to pf.email,
             "age" to pf.age,
@@ -115,12 +226,9 @@ object FirebaseAuthRepository : AuthApi {
             "avatarUri" to pf.avatarUri
         )
 
-        suspendCoroutine<Unit> { cont ->
-            db.collection("users").document(uid)
-                .set(data, SetOptions.merge())
-                .addOnSuccessListener { cont.resume(Unit) }
-                .addOnFailureListener { e -> cont.resumeWithException(e) }
-        }
+        db.collection("users").document(uid)
+            .set(data, SetOptions.merge())
+            .await()
     }
 
     suspend fun fetchActiveRoomId(uid: String): String? {

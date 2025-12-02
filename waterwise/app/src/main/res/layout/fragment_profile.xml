@@ -14,7 +14,7 @@
         android:orientation="vertical"
         android:padding="20dp">
 
-        <!-- Header -->
+        <!-- Header
         <TextView
             android:id="@+id/tvTitle"
             android:layout_width="wrap_content"
@@ -31,7 +31,7 @@
             android:text="Manage your hydration settings"
             android:textSize="13sp"
             android:textColor="#7A8A9A"
-            android:layout_marginTop="4dp"/>
+            android:layout_marginTop="4dp"/>-->
 
         <!-- Avatar / Name / Email -->
         <LinearLayout

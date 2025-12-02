@@ -5,7 +5,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.davidwxcui.waterwise.database.Event
+import com.davidwxcui.waterwise.database.event.Event
 import com.davidwxcui.waterwise.databinding.ItemEventBinding
 import com.daimajia.swipe.SwipeLayout
 import com.google.android.material.shape.ShapeAppearanceModel
@@ -35,12 +35,15 @@ class EventAdapter(private val onDeleteClick: (Event) -> Unit = {}) :
             binding.daysUntil.text = "${event.daysUntil} days"
             binding.eventDescription.text = event.description
             binding.eventRecommendation.text = event.recommendation
+            binding.eventRecommendedAmount.text = event.recommendedAmount
 
             // Set chip background color based on event color
             val chipColor = when (event.color) {
                 "purple" -> android.graphics.Color.parseColor("#F3E8FF")
                 "orange" -> android.graphics.Color.parseColor("#FFE8D0")
                 "teal" -> android.graphics.Color.parseColor("#D0F5F1")
+                "blue" -> android.graphics.Color.parseColor("#E3F2FD")
+                "green" -> android.graphics.Color.parseColor("#E8F5E9")
                 else -> android.graphics.Color.parseColor("#F3E8FF")
             }
             binding.daysUntil.chipBackgroundColor = android.content.res.ColorStateList.valueOf(chipColor)
@@ -58,6 +61,7 @@ class EventAdapter(private val onDeleteClick: (Event) -> Unit = {}) :
             val shapeAppearanceModelWithoutCorners = ShapeAppearanceModel.builder()
                 .setAllCornerSizes(0f)
                 .build()
+
             // Add swipe listener to change corner radius
             swipeLayout.addSwipeListener(object : com.daimajia.swipe.SwipeLayout.SwipeListener {
                 override fun onStartOpen(view: SwipeLayout?) {}

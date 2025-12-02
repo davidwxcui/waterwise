@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.davidwxcui.waterwise.data.DrinkLog
 import com.davidwxcui.waterwise.data.DrinkType
 import com.davidwxcui.waterwise.data.FirestoreDrinkStorage
+import com.davidwxcui.waterwise.data.FirestoreFriendStorage
 import com.davidwxcui.waterwise.ui.profile.FirebaseAuthRepository
 import com.davidwxcui.waterwise.ui.profile.HydrationFormula
 import com.davidwxcui.waterwise.ui.profile.Profile
@@ -23,6 +24,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val storage = FirestoreDrinkStorage()
     private val db = FirebaseFirestore.getInstance()
+    private val friendStorage = FirestoreFriendStorage()
 
     private val uid: String?
         get() = FirebaseAuthRepository.currentUid()
@@ -78,6 +80,25 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val _activeRoomId = MutableLiveData<String?>(null)
     val activeRoomId: LiveData<String?> = _activeRoomId
 
+    // Friend UI
+     data class FriendUI(
+        val uid: String,
+        val name: String,
+        val avatarUri: String?
+    )
+
+    data class FriendRequestUI(
+        val uid: String,
+        val name: String,
+        val avatarUri: String? = null
+    )
+
+    private val _friends = MutableLiveData<List<FriendUI>>(emptyList())
+    val friends: LiveData<List<FriendUI>> = _friends
+
+    private val _friendRequests = MutableLiveData<List<FriendRequestUI>>(emptyList())
+    val friendRequests: LiveData<List<FriendRequestUI>> = _friendRequests
+
     private fun computeDailyGoalMl(): Int {
         return HydrationFormula.dailyGoalMl(
             currentProfile.weightKg.toFloat(),
@@ -118,16 +139,22 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private var drinkReg: ListenerRegistration? = null
     private var profileReg: ListenerRegistration? = null
+    private var friendReg: ListenerRegistration? = null
+    private var friendRequestReg: ListenerRegistration? = null
 
     init {
         startListenDrinkLogs()
         startListenProfile()
+        startListenFriends()
+        startListenFriendRequests()
         refreshDrinkLogsOnce()
     }
 
     fun refreshListeners() {
         startListenDrinkLogs()
         startListenProfile()
+        startListenFriends()
+        startListenFriendRequests()
         refreshDrinkLogsOnce()
     }
 
@@ -218,10 +245,62 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             }
     }
 
+    private fun startListenFriends() {
+        val realUid = uid ?: run {
+            Log.w("HomeViewModel", "startListenFriends skipped: uid=null")
+            return
+        }
+
+        friendReg?.remove()
+        friendReg = friendStorage.listenFriends(
+            uid = realUid,
+            onUpdate = { list ->
+                val uiList = list.map { f ->
+                    FriendUI(
+                        uid = f.uid,
+                        name = f.name,
+                        avatarUri = f.avatarUri
+                    )
+                }
+                _friends.postValue(uiList)
+            },
+            onError = { e ->
+                Log.e("HomeViewModel", "listenFriends error", e)
+            }
+        )
+    }
+
+    private fun startListenFriendRequests() {
+        val realUid = uid ?: run {
+            Log.w("HomeViewModel", "startListenFriendRequests skipped: uid=null")
+            return
+        }
+
+        friendRequestReg?.remove()
+        friendRequestReg = friendStorage.listenFriendRequests(
+            uid = realUid,
+            onUpdate = { list ->
+                val uiList = list.map { r ->
+                    FriendRequestUI(
+                        uid = r.uid,
+                        name = r.name,
+                        avatarUri = r.avatarUri
+                    )
+                }
+                _friendRequests.postValue(uiList)
+            },
+            onError = { e ->
+                Log.e("HomeViewModel", "listenFriendRequests error", e)
+            }
+        )
+    }
+
     override fun onCleared() {
         super.onCleared()
         drinkReg?.remove()
         profileReg?.remove()
+        friendReg?.remove()
+        friendRequestReg?.remove()
     }
 
     fun defaultPortionsFor(t: DrinkType): List<Int> =
@@ -233,7 +312,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addDrink(type: DrinkType, volumeMl: Int) {
-        val realUid = uid ?: return
+        val realUid = uid
+        if (realUid == null) {
+            Log.e("HomeViewModel", "User is not logged in! Cannot save drink.")
+            android.widget.Toast.makeText(getApplication(), "Please log in to start tracking", android.widget.Toast.LENGTH_SHORT).show()
+            return
+        }
         val rounded = max(50, (volumeMl / 50) * 50)
         val eff = (rounded * (factor[type] ?: 1.0)).toInt()
 
@@ -335,6 +419,51 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             remaining >= 200 -> 200
             remaining == 0 -> 0
             else -> 200
+        }
+    }
+
+    fun addFriendByQuery(query: String) {
+        val realUid = uid ?: return
+        val trimmed = query.trim()
+        if (trimmed.isEmpty()) {
+            Log.w("HomeViewModel", "addFriendByQuery skipped: empty query")
+            return
+        }
+        viewModelScope.launch {
+            val result = friendStorage.addFriendByQuery(realUid, trimmed)
+            result.onFailure { e ->
+                Log.e("HomeViewModel", "addFriendByQuery failed", e)
+            }
+        }
+    }
+
+    fun removeFriend(friendUid: String) {
+        val realUid = uid ?: return
+        viewModelScope.launch {
+            val result = friendStorage.removeFriend(realUid, friendUid)
+            result.onFailure { e ->
+                Log.e("HomeViewModel", "removeFriend failed", e)
+            }
+        }
+    }
+
+    fun acceptFriendRequest(req: FriendRequestUI) {
+        val realUid = uid ?: return
+        viewModelScope.launch {
+            val result = friendStorage.acceptFriendRequest(realUid, req.uid)
+            result.onFailure { e ->
+                Log.e("HomeViewModel", "acceptFriendRequest failed", e)
+            }
+        }
+    }
+
+    fun declineFriendRequest(req: FriendRequestUI) {
+        val realUid = uid ?: return
+        viewModelScope.launch {
+            val result = friendStorage.declineFriendRequest(realUid, req.uid)
+            result.onFailure { e ->
+                Log.e("HomeViewModel", "declineFriendRequest failed", e)
+            }
         }
     }
 }
