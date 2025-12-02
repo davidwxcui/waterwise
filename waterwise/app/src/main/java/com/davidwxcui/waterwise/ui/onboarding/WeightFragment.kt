@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -30,10 +31,7 @@ class WeightFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Use post to ensure NumberPicker is fully laid out before setup
-        binding.numberPicker.post {
-            setupNumberPicker()
-        }
+        setupWeightInput()
 
         binding.btnBack.setOnClickListener {
             findNavController().navigateUp()
@@ -41,41 +39,64 @@ class WeightFragment : Fragment() {
 
         binding.chipKg.setOnClickListener {
             currentUnit = WeightUnit.KG
-            setupNumberPicker()
+            updateWeightUnit()
         }
 
         binding.chipLb.setOnClickListener {
             currentUnit = WeightUnit.LB
-            setupNumberPicker()
+            updateWeightUnit()
         }
 
         binding.btnNext.setOnClickListener {
-            val weight = binding.numberPicker.value.toFloat()
-            viewModel.setWeight(weight, currentUnit)
-            findNavController().navigate(R.id.action_weight_to_height)
+            val weightText = binding.etWeight.text.toString()
+            if (weightText.isNotEmpty()) {
+                val weight = weightText.toFloatOrNull()
+                if (weight != null && weight > 0) {
+                    viewModel.setWeight(weight, currentUnit)
+                    findNavController().navigate(R.id.action_weight_to_height)
+                } else {
+                    binding.inputLayoutWeight.error = "Please enter a valid weight"
+                }
+            } else {
+                binding.inputLayoutWeight.error = "Please enter your weight"
+            }
+        }
+
+        // Clear error when user starts typing
+        binding.etWeight.addTextChangedListener {
+            binding.inputLayoutWeight.error = null
         }
     }
 
-    private fun setupNumberPicker() {
-        binding.numberPicker.apply {
-            when (currentUnit) {
-                WeightUnit.KG -> {
-                    minValue = 30
-                    maxValue = 200
-                    value = 70
-                    displayedValues = (30..200).map { it.toString() }.toTypedArray()
-                }
-                WeightUnit.LB -> {
-                    minValue = 66
-                    maxValue = 440
-                    value = 154
-                    displayedValues = (66..440).map { it.toString() }.toTypedArray()
+    private fun setupWeightInput() {
+        binding.etWeight.setText("70")
+        binding.chipKg.isChecked = true
+        binding.chipLb.isChecked = false
+    }
+
+    private fun updateWeightUnit() {
+        val currentWeight = binding.etWeight.text.toString().toFloatOrNull() ?: 70f
+
+        val newWeight = when (currentUnit) {
+            WeightUnit.KG -> {
+                if (binding.chipLb.isChecked) {
+                    // Was LB, convert to KG
+                    (currentWeight / 2.20462).toInt()
+                } else {
+                    currentWeight.toInt()
                 }
             }
-            wrapSelectorWheel = false
-            descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+            WeightUnit.LB -> {
+                if (binding.chipKg.isChecked) {
+                    // Was KG, convert to LB
+                    (currentWeight * 2.20462).toInt()
+                } else {
+                    currentWeight.toInt()
+                }
+            }
         }
 
+        binding.etWeight.setText(newWeight.toString())
         binding.chipKg.isChecked = currentUnit == WeightUnit.KG
         binding.chipLb.isChecked = currentUnit == WeightUnit.LB
     }
@@ -85,4 +106,3 @@ class WeightFragment : Fragment() {
         _binding = null
     }
 }
-

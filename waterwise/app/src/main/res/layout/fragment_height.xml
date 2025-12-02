@@ -82,65 +82,75 @@
             android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
     </com.google.android.material.chip.ChipGroup>
 
-    <NumberPicker
-        android:id="@+id/number_picker_cm"
-        android:layout_width="wrap_content"
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/input_layout_height_cm"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:theme="@style/NumberPickerTheme"
-        app:layout_constraintBottom_toTopOf="@id/btn_next"
+        android:layout_marginTop="48dp"
+        android:hint="Enter height (cm)"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/chip_group_unit" />
+        app:layout_constraintTop_toBottomOf="@id/chip_group_unit"
+        app:layout_constraintWidth_max="300dp">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/et_height_cm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:textSize="18sp"
+            android:textAlignment="center" />
+    </com.google.android.material.textfield.TextInputLayout>
 
     <LinearLayout
         android:id="@+id/layout_feet_inches"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginTop="48dp"
         android:orientation="horizontal"
+        android:gravity="center"
         android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@id/btn_next"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/chip_group_unit">
+        app:layout_constraintTop_toBottomOf="@id/chip_group_unit"
+        app:layout_constraintWidth_max="300dp">
 
-        <LinearLayout
-            android:layout_width="wrap_content"
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/input_layout_feet"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:orientation="vertical">
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:hint="Feet">
 
-            <TextView
-                android:layout_width="wrap_content"
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_feet"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Feet"
-                android:textSize="14sp" />
+                android:inputType="number"
+                android:textSize="18sp"
+                android:textAlignment="center" />
+        </com.google.android.material.textfield.TextInputLayout>
 
-            <NumberPicker
-                android:id="@+id/number_picker_feet"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:theme="@style/NumberPickerTheme" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="wrap_content"
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/input_layout_inches"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="24dp"
-            android:gravity="center"
-            android:orientation="vertical">
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:hint="Inches">
 
-            <TextView
-                android:layout_width="wrap_content"
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_inches"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Inches"
-                android:textSize="14sp" />
-
-            <NumberPicker
-                android:id="@+id/number_picker_inches"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:theme="@style/NumberPickerTheme" />
-        </LinearLayout>
+                android:inputType="number"
+                android:textSize="18sp"
+                android:textAlignment="center" />
+        </com.google.android.material.textfield.TextInputLayout>
     </LinearLayout>
 
     <com.google.android.material.button.MaterialButton
