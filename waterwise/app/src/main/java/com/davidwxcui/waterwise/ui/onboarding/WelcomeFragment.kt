@@ -32,7 +32,7 @@ class WelcomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.btnGetStarted.setOnClickListener {
-            findNavController().navigate(R.id.action_welcome_to_userInfo)
+            findNavController().navigate(R.id.action_welcome_to_gender)
         }
 
         binding.btnSkip.setOnClickListener {

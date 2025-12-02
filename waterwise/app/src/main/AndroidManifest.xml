@@ -18,10 +18,6 @@
         tools:replace="android:label,android:icon,android:roundIcon,android:theme">
 
         <activity
-            android:name=".ui.onboarding.OnboardingActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Waterwise" />
-        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
@@ -30,7 +26,6 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".minigame.GameActivity" />
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="shortService"
@@ -46,6 +41,16 @@
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
             </intent-filter>
         </receiver>
+        <activity
+            android:name=".minigame.GameActivity"
+            android:label="@string/title_game"
+            android:theme="@style/Theme.Waterwise.Game"
+            android:exported="false" />
+        <activity
+        android:name=".minigame.RoomMatchActivity"
+        android:label="@string/title_match"
+        android:theme="@style/Theme.Waterwise.Game"
+        android:exported="false" />
     </application>
 
 </manifest>

@@ -22,91 +22,48 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:orientation="vertical"
-        app:layout_constraintBottom_toTopOf="@id/btn_finish"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.09">
+        app:layout_constraintTop_toTopOf="parent">
 
         <TextView
             android:id="@+id/tv_congratulations"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="🎉"
-            android:textSize="64sp" />
+            android:textSize="80sp" />
 
         <TextView
             android:id="@+id/tv_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="24dp"
             android:text="All Set!"
             android:textColor="?android:attr/textColorPrimary"
-            android:textSize="32sp"
+            android:textSize="36sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/tv_subtitle"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="16dp"
+            android:paddingHorizontal="32dp"
             android:text="Your personalized hydration plan is ready"
             android:textAlignment="center"
             android:textColor="?android:attr/textColorSecondary"
-            android:textSize="16sp" />
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="48dp"
-            app:cardBackgroundColor="?attr/colorPrimaryContainer"
-            app:cardCornerRadius="24dp"
-            app:cardElevation="4dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:padding="32dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Your Daily Goal"
-                    android:textColor="?attr/colorOnPrimaryContainer"
-                    android:textSize="16sp" />
-
-                <TextView
-                    android:id="@+id/tv_daily_goal"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="2.5 L"
-                    android:textColor="?attr/colorOnPrimaryContainer"
-                    android:textSize="56sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tv_daily_goal_detail"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="(about 10 cups)"
-                    android:textColor="?android:attr/textColorSecondary"
-                    android:textSize="15sp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+            android:textSize="18sp" />
 
         <TextView
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
+            android:layout_marginTop="24dp"
+            android:paddingHorizontal="32dp"
             android:gravity="center"
-            android:text="This goal is personalized based on your profile, activity level, and wellness objectives."
+            android:text="Let's start your journey to better hydration and wellness!"
             android:textColor="?android:attr/textColorSecondary"
-            android:textSize="14sp" />
+            android:textSize="15sp" />
     </LinearLayout>
 
     <com.google.android.material.button.MaterialButton

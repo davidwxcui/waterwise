@@ -1,6 +1,7 @@
 package com.davidwxcui.waterwise.ui.profile
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.util.Patterns
 import android.view.LayoutInflater
@@ -11,7 +12,9 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.davidwxcui.waterwise.R
+import com.davidwxcui.waterwise.data.OnboardingPreferences
 import com.davidwxcui.waterwise.databinding.FragmentLoginBinding
+import com.davidwxcui.waterwise.ui.onboarding.OnboardingActivity
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -150,7 +153,18 @@ class LoginFragment : Fragment() {
 
                     Snackbar.make(binding.root, "Login successful", Snackbar.LENGTH_SHORT).show()
                     delay(200)
-                    findNavController().popBackStack()
+
+                    // Check if onboarding is completed
+                    val onboardingPrefs = OnboardingPreferences(requireContext())
+                    if (!onboardingPrefs.isOnboardingCompleted()) {
+                        // Launch onboarding activity immediately
+                        val intent = Intent(requireContext(), OnboardingActivity::class.java)
+                        startActivity(intent)
+                        requireActivity().finish()
+                    } else {
+                        // Just go back to profile
+                        findNavController().popBackStack()
+                    }
                 } else {
                     val fail = sp.getInt(KEY_FAIL_COUNT, 0) + 1
                     val editor = sp.edit().putInt(KEY_FAIL_COUNT, fail)

@@ -34,13 +34,16 @@ class UserInfoFragment : Fragment() {
 
         binding.btnNext.setOnClickListener {
             val name = binding.etName.text.toString().trim()
-            val email = binding.etEmail.text.toString().trim()
 
-            // Save name and email to view model
-            viewModel.setUserInfo(name, email)
+            // Save only name to view model (email comes from registration)
+            viewModel.setUserInfo(name)
 
             // Navigate to gender selection
-            findNavController().navigate(R.id.action_userInfo_to_gender)
+            // Note: This fragment is currently not used in the navigation flow.
+            // The app goes directly from Welcome -> Gender, skipping user info.
+            // If you want to re-enable this fragment, add it back to onboarding_navigation.xml
+            // and create the action: action_userInfo_to_gender
+            findNavController().navigate(R.id.genderFragment)
         }
     }
 
