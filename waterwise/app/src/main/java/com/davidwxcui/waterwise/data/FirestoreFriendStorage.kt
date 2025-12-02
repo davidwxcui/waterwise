@@ -34,7 +34,6 @@ class FirestoreFriendStorage {
         return s.contains("@") && s.contains(".")
     }
 
-
     suspend fun addFriendByQuery(myUid: String, query: String): Result<Unit> {
         return try {
             val trimmed = query.trim()
@@ -42,22 +41,42 @@ class FirestoreFriendStorage {
                 throw Exception("Please input Friend's UID or E-mail")
             }
 
-            val friendSnap = if (looksLikeEmail(trimmed)) {
-                val q = usersCol()
-                    .whereEqualTo("email", trimmed)
-                    .limit(1)
-                    .get()
-                    .await()
-                if (q.isEmpty) {
-                    throw Exception("Doesn't find any user with this email")
+            // Seach friends by:
+            val friendSnap = when {
+                // 1) email
+                looksLikeEmail(trimmed) -> {
+                    val q = usersCol()
+                        .whereEqualTo("email", trimmed)
+                        .limit(1)
+                        .get()
+                        .await()
+                    if (q.isEmpty) {
+                        throw Exception("Doesn't find any user with this email")
+                    }
+                    q.documents.first()
                 }
-                q.documents.first()
-            } else {
-                val doc = userDoc(trimmed).get().await()
-                if (!doc.exists()) {
-                    throw Exception("Doesn't find any user with this UID")
+
+                // numID
+                trimmed.all { it.isDigit() } -> {
+                    val q = usersCol()
+                        .whereEqualTo("numericUid", trimmed)
+                        .limit(1)
+                        .get()
+                        .await()
+                    if (q.isEmpty) {
+                        throw Exception("Doesn't find any user with this UID")
+                    }
+                    q.documents.first()
                 }
-                doc
+
+                // uid in firebase
+                else -> {
+                    val doc = userDoc(trimmed).get().await()
+                    if (!doc.exists()) {
+                        throw Exception("Doesn't find any user with this UID")
+                    }
+                    doc
+                }
             }
 
             val friendUid = friendSnap.id
@@ -126,7 +145,6 @@ class FirestoreFriendStorage {
                 onUpdate(list)
             }
     }
-
 
     fun listenFriendRequests(
         uid: String,
