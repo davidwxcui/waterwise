@@ -253,4 +253,157 @@ class FirestoreDrinkStorage {
         }
         return Triple(caffeine, alcohol, sugar)
     }
+
+
+
+
+    // 计算最近 N 天的时间范围（含今天），单位：毫秒
+    // 例如 days = 7 -> 从 6 天前 00:00 到 明天 00:00
+    private fun recentRangeMillis(days: Int): Pair<Long, Long> {
+        if (days <= 1) return todayRangeMillis()
+
+        return if (Build.VERSION.SDK_INT >= 26) {
+            val zone = ZoneId.systemDefault()
+            val startDate = LocalDate.now().minusDays((days - 1).toLong())
+            val start = startDate.atStartOfDay(zone).toInstant().toEpochMilli()
+            val end = LocalDate.now()
+                .plusDays(1)
+                .atStartOfDay(zone)
+                .toInstant()
+                .toEpochMilli()
+            start to end
+        } else {
+            val calEnd = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+                add(Calendar.DAY_OF_YEAR, 1) // 明天 00:00
+            }
+            val end = calEnd.timeInMillis
+            val calStart = calEnd.clone() as Calendar
+            calStart.add(Calendar.DAY_OF_YEAR, -(days - 1))
+            val start = calStart.timeInMillis
+            start to end
+        }
+    }
+
+
+    suspend fun fetchTotalIntake(uid: String, days: Int): Int {
+        // 1 天就直接用你现成的 today 查询
+        if (days <= 1) {
+            val logs = fetchDrinkLogsOnce(uid)
+            return logs.sumOf { it.volumeMl }
+        }
+
+        val (start, end) = recentRangeMillis(days)
+
+        val snap = drinkLogsCol(uid)
+            .whereGreaterThanOrEqualTo("timeMillis", start)
+            .whereLessThan("timeMillis", end)
+            .orderBy("timeMillis", Query.Direction.DESCENDING)
+            .get()
+            .await()
+
+        val list = snap.documents.mapNotNull { doc ->
+            try {
+                val typeStrRaw = doc.getString("type") ?: return@mapNotNull null
+                val type = parseDrinkTypeSafe(typeStrRaw) ?: return@mapNotNull null
+
+                val id = getLongSafe(doc.get("id")).toInt()
+                val volumeMl = getLongSafe(doc.get("volumeMl")).toInt()
+                val effectiveMl = getLongSafe(doc.get("effectiveMl")).toInt()
+                val note = doc.getString("note")
+                val timeMillis = getLongSafe(doc.get("timeMillis"))
+
+                DrinkLog(
+                    id = id,
+                    type = type,
+                    volumeMl = volumeMl,
+                    effectiveMl = effectiveMl,
+                    note = note,
+                    timeMillis = timeMillis
+                )
+            } catch (e: Exception) {
+                Log.e("FirestoreDrinkStorage", "fetchTotalIntake parse error: ${e.message}")
+                null
+            }
+        }
+
+        return list.sumOf { it.volumeMl }
+    }
+
+    // 计算最近 N 天的时间范围（含今天，共 days 天）
+    private fun rangeLastDaysMillis(days: Int): Pair<Long, Long> {
+        val d = if (days <= 0) 1 else days
+        return if (Build.VERSION.SDK_INT >= 26) {
+            val zone = ZoneId.systemDefault()
+            val end = LocalDate.now()
+                .plusDays(1)
+                .atStartOfDay(zone)
+                .toInstant()
+                .toEpochMilli()
+            val start = LocalDate.now()
+                .minusDays(d.toLong() - 1)
+                .atStartOfDay(zone)
+                .toInstant()
+                .toEpochMilli()
+            start to end
+        } else {
+            val cal = Calendar.getInstance()
+            cal.set(Calendar.HOUR_OF_DAY, 0)
+            cal.set(Calendar.MINUTE, 0)
+            cal.set(Calendar.SECOND, 0)
+            cal.set(Calendar.MILLISECOND, 0)
+            val endCal = cal.clone() as Calendar
+            endCal.add(Calendar.DAY_OF_YEAR, d)
+            val start = cal.timeInMillis
+            val end = endCal.timeInMillis
+            start to end
+        }
+    }
+
+    /**
+     * 给一组 uid，统计最近 days 天内每个人喝了多少 ml（volumeMl 求和）。
+     */
+    suspend fun fetchTotalIntakeForUids(
+        uids: List<String>,
+        days: Int
+    ): Map<String, Int> {
+        if (uids.isEmpty()) return emptyMap()
+
+        val result = mutableMapOf<String, Int>()
+        val (start, end) = rangeLastDaysMillis(days)
+
+        for (uid in uids) {
+            try {
+                val snap = drinkLogsCol(uid)
+                    .whereGreaterThanOrEqualTo("timeMillis", start)
+                    .whereLessThan("timeMillis", end)
+                    .get()
+                    .await()
+
+                var total = 0
+                for (doc in snap.documents) {
+                    val v = getLongSafe(doc.get("volumeMl")).toInt()
+                    total += v
+                }
+                result[uid] = total
+            } catch (e: Exception) {
+                // 出错就当作 0
+                result[uid] = result[uid] ?: 0
+            }
+        }
+        return result
+    }
+
+
+
+
+    suspend fun fetchTodayTotalIntake(uid: String): Int =
+        fetchTotalIntake(uid, 1)
+
+    suspend fun fetchTodayTotalIntakeForUids(uids: List<String>): Map<String, Int> =
+        fetchTotalIntakeForUids(uids, 1)
+
 }

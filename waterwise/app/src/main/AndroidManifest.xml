@@ -25,7 +25,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
+        <activity
+            android:name=".ui.onboarding.OnboardingActivity"
+            android:exported="false" />
         <activity
             android:name=".ui.onboarding.OnboardingActivity"
             android:exported="false"
@@ -56,6 +58,11 @@
         android:label="@string/title_match"
         android:theme="@style/Theme.Waterwise.Game"
         android:exported="false" />
+
+        <activity
+            android:name=".minigame.GameRankingActivity"
+            android:label="Game Ranking"
+            android:exported="false" />
     </application>
 
 </manifest>

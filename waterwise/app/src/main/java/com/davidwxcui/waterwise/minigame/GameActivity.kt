@@ -26,7 +26,7 @@ import kotlinx.coroutines.tasks.await
 import kotlin.random.Random
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
-
+private lateinit var btnGameRanking: ImageButton
 // ================== DATA MODELS ==================
 
 data class PlayerState(
@@ -249,6 +249,14 @@ class GameActivity : AppCompatActivity() {
         boardGrid = findViewById(R.id.boardGrid)
         boardContainer = findViewById(R.id.boardContainer)
         diceImageView = findViewById(R.id.diceImageView)
+
+        // ⭐ 排行榜按钮
+        btnGameRanking = findViewById(R.id.btnGameRanking)
+        btnGameRanking.setOnClickListener {
+            val intent = Intent(this, GameRankingActivity::class.java)
+            intent.putExtra(EXTRA_ROOM_ID, roomId)
+            startActivity(intent)
+        }
     }
 
     // ---------- Top-right menu ----------
