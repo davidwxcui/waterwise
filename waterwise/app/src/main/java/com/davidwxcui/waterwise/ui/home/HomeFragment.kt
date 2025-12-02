@@ -23,6 +23,8 @@ import kotlin.math.roundToInt
 import android.content.Intent
 import com.davidwxcui.waterwise.minigame.RoomMatchActivity
 import androidx.navigation.fragment.findNavController
+import com.davidwxcui.waterwise.ui.profile.ProfilePrefs
+
 
 class HomeFragment : Fragment() {
 
@@ -50,6 +52,9 @@ class HomeFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        val profile = ProfilePrefs.load(requireContext())
+        val displayName = profile.name.takeIf { it.isNotBlank() } ?: "Guest"
+        binding.tvGreeting.text = "Hello, $displayName"
         val dateText = if (Build.VERSION.SDK_INT >= 26) {
             LocalDateTime.now().format(DateTimeFormatter.ofPattern("EEE, MMM d"))
         } else {
