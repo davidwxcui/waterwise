@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -12,6 +13,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.davidwxcui.waterwise.R
 import com.davidwxcui.waterwise.data.FirestoreDrinkStorage
 import com.davidwxcui.waterwise.data.FirestoreFriendStorage
@@ -37,7 +39,6 @@ class UserRankingFragment : Fragment() {
 
     private lateinit var rankingAdapter: RankingAdapter
 
-    // 缓存：每个范围对应一份排行榜
     private val rankingCache = mutableMapOf<Range, List<RankItem>>()
 
     private data class RankItem(
@@ -46,7 +47,8 @@ class UserRankingFragment : Fragment() {
         val isMe: Boolean,
         val totalMl: Int,
         val percent: Int,
-        val rank: Int
+        val rank: Int,
+        val avatarUrl: String?
     )
 
     override fun onCreateView(
@@ -166,14 +168,14 @@ class UserRankingFragment : Fragment() {
             return
         }
 
-        // ① 先用缓存里的数据立刻刷新 UI（如果有的话）
+        val myProfile = ProfilePrefs.load(ctx)
+
         rankingCache[currentRange]?.let { cached ->
             applyRankingToUi(cached, myUid)
         }
 
         val days = currentDays()
 
-        // ② 再异步去拉最新数据，拉完更新缓存 + UI
         viewLifecycleOwner.lifecycleScope.launch {
             val friends = friendStorage.fetchFriendsOnce(myUid)
 
@@ -193,10 +195,12 @@ class UserRankingFragment : Fragment() {
 
             val itemsNoRank = allUids.map { uid ->
                 val isMe = uid == myUid
+                val friendInfo = friends.firstOrNull { it.uid == uid }
+
                 val rawName = if (isMe) {
                     binding.myUserId.text?.toString().orEmpty()
                 } else {
-                    friends.firstOrNull { it.uid == uid }?.name ?: uid
+                    friendInfo?.name ?: uid
                 }
                 val name = rawName.ifBlank { uid }
 
@@ -211,17 +215,23 @@ class UserRankingFragment : Fragment() {
                         .coerceIn(0, 100)
                 }
 
+                val avatarUrl = if (isMe) {
+                    myProfile.avatarUri
+                } else {
+                    friendInfo?.avatarUri
+                }
+
                 RankItem(
                     uid = uid,
                     name = name,
                     isMe = isMe,
                     totalMl = totalMl,
                     percent = percent,
-                    rank = 0
+                    rank = 0,
+                    avatarUrl = avatarUrl
                 )
             }
 
-            // TODAY：按百分比排；7/30：按总 ml 排
             val comparator = when (currentRange) {
                 Range.TODAY ->
                     compareByDescending<RankItem> { it.percent }
@@ -241,7 +251,6 @@ class UserRankingFragment : Fragment() {
         }
     }
 
-    /** 把一份排行榜结果应用到 UI（顶部 + 列表 + 空态） */
     private fun applyRankingToUi(sorted: List<RankItem>, myUid: String) {
         val myItem = sorted.firstOrNull { it.uid == myUid }
         if (myItem != null) {
@@ -284,6 +293,7 @@ class UserRankingFragment : Fragment() {
             private val tvRank: TextView = view.findViewById(R.id.tvRank)
             private val tvName: TextView = view.findViewById(R.id.tvName)
             private val tvProgress: TextView = view.findViewById(R.id.tvProgress)
+            private val imgAvatar: ImageView = view.findViewById(R.id.imgAvatar)
 
             fun bind(item: RankItem) {
                 tvRank.text = "#${item.rank}"
@@ -300,6 +310,15 @@ class UserRankingFragment : Fragment() {
                         "$prefix: ${item.totalMl} ml · ${item.percent}%"
                     Range.WEEK, Range.MONTH ->
                         "$prefix: ${item.totalMl} ml"
+                }
+
+                if (item.avatarUrl.isNullOrBlank()) {
+                    imgAvatar.setImageDrawable(null)
+                } else {
+                    Glide.with(imgAvatar.context)
+                        .load(item.avatarUrl)
+                        .circleCrop()
+                        .into(imgAvatar)
                 }
             }
         }
