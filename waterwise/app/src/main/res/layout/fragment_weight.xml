@@ -82,15 +82,26 @@
             android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
     </com.google.android.material.chip.ChipGroup>
 
-    <NumberPicker
-        android:id="@+id/number_picker"
-        android:layout_width="wrap_content"
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/input_layout_weight"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:theme="@style/NumberPickerTheme"
-        app:layout_constraintBottom_toTopOf="@id/btn_next"
+        android:layout_marginTop="48dp"
+        android:hint="Enter weight"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/chip_group_unit" />
+        app:layout_constraintTop_toBottomOf="@id/chip_group_unit"
+        app:layout_constraintWidth_max="300dp">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/et_weight"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="numberDecimal"
+            android:textSize="18sp"
+            android:textAlignment="center" />
+    </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_next"
