@@ -5,11 +5,25 @@
     android:orientation="horizontal"
     android:padding="12dp">
 
-    <ImageView
-        android:id="@+id/imgAvatar"
+    <FrameLayout
         android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:src="@drawable/ic_avatar_placeholder"/>
+        android:layout_height="40dp">
+
+        <ImageView
+            android:id="@+id/imgAvatar"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:src="@drawable/ic_avatar_placeholder" />
+
+        <TextView
+            android:id="@+id/tvAvatarInitial"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="A"
+            android:textStyle="bold"
+            android:textColor="@android:color/black" />
+    </FrameLayout>
 
     <LinearLayout
         android:layout_width="0dp"

@@ -14,9 +14,12 @@ import com.davidwxcui.waterwise.ui.profile.FirebaseAuthRepository
 import com.davidwxcui.waterwise.ui.profile.HydrationFormula
 import com.davidwxcui.waterwise.ui.profile.Profile
 import com.davidwxcui.waterwise.ui.profile.ProfilePrefs
+import com.davidwxcui.waterwise.ui.profile.Sex
+import com.davidwxcui.waterwise.ui.profile.ActivityLevel
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlin.math.max
 import kotlin.math.min
 
@@ -81,10 +84,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val activeRoomId: LiveData<String?> = _activeRoomId
 
     // Friend UI
-     data class FriendUI(
+    data class FriendUI(
         val uid: String,
         val name: String,
-        val avatarUri: String?
+        val avatarUri: String?,
+        val todayIntakeMl: Int,
+        val todayGoalMl: Int
     )
 
     data class FriendRequestUI(
@@ -255,14 +260,91 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         friendReg = friendStorage.listenFriends(
             uid = realUid,
             onUpdate = { list ->
-                val uiList = list.map { f ->
-                    FriendUI(
-                        uid = f.uid,
-                        name = f.name,
-                        avatarUri = f.avatarUri
-                    )
+                viewModelScope.launch {
+                    try {
+                        val uids = list.map { it.uid }
+                        val todayMap: Map<String, Int> =
+                            if (uids.isNotEmpty()) {
+                                try {
+                                    storage.fetchTodayTotalIntakeForUids(uids)
+                                } catch (e: Exception) {
+                                    Log.e("HomeViewModel", "fetchTodayTotalIntakeForUids failed", e)
+                                    emptyMap()
+                                }
+                            } else {
+                                emptyMap()
+                            }
+
+                        // Get Dailt Goal in user/uid
+                        val goalMap = mutableMapOf<String, Int>()
+                        for (f in list) {
+                            try {
+                                val snap = db.collection("users")
+                                    .document(f.uid)
+                                    .get()
+                                    .await()
+
+                                if (!snap.exists()) continue
+
+                                val age = (snap.getLong("age") ?: 0L).toInt()
+                                val weight = (snap.getLong("weightKg") ?: 0L).toInt()
+                                val sexStr = snap.getString("sex")
+                                val actStr = snap.getString("activityLevel")
+
+                                val sex = try {
+                                    if (sexStr != null) Sex.valueOf(sexStr) else Sex.UNSPECIFIED
+                                } catch (_: Exception) {
+                                    Sex.UNSPECIFIED
+                                }
+
+                                val activity = try {
+                                    if (actStr != null) ActivityLevel.valueOf(actStr) else ActivityLevel.SEDENTARY
+                                } catch (_: Exception) {
+                                    ActivityLevel.SEDENTARY
+                                }
+
+                                val goal = if (weight > 0 && age > 0) {
+                                    HydrationFormula.dailyGoalMl(
+                                        weight.toFloat(),
+                                        sex,
+                                        age,
+                                        activity
+                                    )
+                                } else {
+                                    0
+                                }
+
+                                goalMap[f.uid] = goal
+                            } catch (e: Exception) {
+                                Log.e("HomeViewModel", "load friend goal failed for ${f.uid}", e)
+                            }
+                        }
+
+                        // Order in Letter
+                        val uiList = list
+                            .map { f ->
+                                val today = todayMap[f.uid] ?: 0
+                                val goal = goalMap[f.uid] ?: 0
+                                FriendUI(
+                                    uid = f.uid,
+                                    name = f.name,
+                                    avatarUri = f.avatarUri,
+                                    todayIntakeMl = today,
+                                    todayGoalMl = goal
+                                )
+                            }
+                            .sortedBy { friend ->
+                                friend.name
+                                    .ifBlank { friend.uid }
+                                    .trim()
+                                    .lowercase()
+                            }
+
+                        _friends.postValue(uiList)
+                    } catch (e: Exception) {
+                        Log.e("HomeViewModel", "listenFriends onUpdate failed", e)
+                    }
                 }
-                _friends.postValue(uiList)
             },
             onError = { e ->
                 Log.e("HomeViewModel", "listenFriends error", e)
@@ -315,7 +397,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val realUid = uid
         if (realUid == null) {
             Log.e("HomeViewModel", "User is not logged in! Cannot save drink.")
-            android.widget.Toast.makeText(getApplication(), "Please log in to start tracking", android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(
+                getApplication(),
+                "Please log in to start tracking",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
             return
         }
         val rounded = max(50, (volumeMl / 50) * 50)
