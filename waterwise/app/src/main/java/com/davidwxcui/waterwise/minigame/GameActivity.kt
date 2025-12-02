@@ -249,21 +249,6 @@ class GameActivity : AppCompatActivity() {
         boardGrid = findViewById(R.id.boardGrid)
         boardContainer = findViewById(R.id.boardContainer)
         diceImageView = findViewById(R.id.diceImageView)
-
-        // ⭐ 排行榜按钮
-        btnGameRanking = findViewById(R.id.btnGameRanking)
-        btnGameRanking.setOnClickListener {
-            val intent = Intent(this, GameRankingActivity::class.java)
-            intent.putExtra(EXTRA_ROOM_ID, roomId)
-            startActivity(intent)
-        }
-    }
-
-    // ---------- Top-right menu ----------
-
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.menu_game, menu)
-        return true
     }
 
     // ---------- Top-right menu ----------

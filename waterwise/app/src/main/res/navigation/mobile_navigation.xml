@@ -101,21 +101,4 @@
         android:label="Friend Requests" />
 
 
-    <!-- NEW: User Ranking Page -->
-    <fragment
-        android:id="@+id/navigation_user_ranking"
-        android:name="com.davidwxcui.waterwise.ui.home.UserRankingFragment"
-        android:label="Ranking"
-        tools:layout="@layout/fragment_user_ranking" >
-        <action
-            android:id="@+id/action_navigation_user_ranking_to_navigation_home"
-            app:destination="@id/navigation_home" />
-    </fragment>
-
-
-    <fragment
-        android:id="@+id/gameRankingFragment"
-        android:name="com.davidwxcui.waterwise.minigame.GameRankingFragment"
-        android:label="Game Ranking" />
-
 </navigation>

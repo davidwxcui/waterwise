@@ -129,5 +129,4 @@
         android:label="Your Daily Goal"
         tools:layout="@layout/fragment_daily_goal_result" />
 
-
 </navigation>

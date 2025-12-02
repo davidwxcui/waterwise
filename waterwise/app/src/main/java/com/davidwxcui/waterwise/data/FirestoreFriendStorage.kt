@@ -13,7 +13,6 @@ class FirestoreFriendStorage {
     private fun usersCol() = db.collection("users")
     private fun userDoc(uid: String) = usersCol().document(uid)
     private fun friendsCol(uid: String) = userDoc(uid).collection("friends")
-
     private fun friendRequestsCol(uid: String) = userDoc(uid).collection("friendRequests")
 
     data class Friend(
@@ -34,6 +33,10 @@ class FirestoreFriendStorage {
         return s.contains("@") && s.contains(".")
     }
 
+    // Check is it look like numeric id
+    private fun looksLikeNumericUid(s: String): Boolean {
+        return s.length == 10 && s.all { it.isDigit() }
+    }
 
     suspend fun addFriendByQuery(myUid: String, query: String): Result<Unit> {
         return try {
@@ -42,22 +45,39 @@ class FirestoreFriendStorage {
                 throw Exception("Please input Friend's UID or E-mail")
             }
 
-            val friendSnap = if (looksLikeEmail(trimmed)) {
-                val q = usersCol()
-                    .whereEqualTo("email", trimmed)
-                    .limit(1)
-                    .get()
-                    .await()
-                if (q.isEmpty) {
-                    throw Exception("Doesn't find any user with this email")
+            val friendSnap = when {
+                looksLikeEmail(trimmed) -> {
+                    // 用 email 查
+                    val q = usersCol()
+                        .whereEqualTo("email", trimmed)
+                        .limit(1)
+                        .get()
+                        .await()
+                    if (q.isEmpty) {
+                        throw Exception("Doesn't find any user with this email")
+                    }
+                    q.documents.first()
                 }
-                q.documents.first()
-            } else {
-                val doc = userDoc(trimmed).get().await()
-                if (!doc.exists()) {
-                    throw Exception("Doesn't find any user with this UID")
+                looksLikeNumericUid(trimmed) -> {
+                    // NEW: 用 numericUid 查（10 位 public id）
+                    val q = usersCol()
+                        .whereEqualTo("numericUid", trimmed)
+                        .limit(1)
+                        .get()
+                        .await()
+                    if (q.isEmpty) {
+                        throw Exception("Doesn't find any user with this UID")
+                    }
+                    q.documents.first()
                 }
-                doc
+                else -> {
+                    // 兜底：当成内部 firebase uid 查
+                    val doc = userDoc(trimmed).get().await()
+                    if (!doc.exists()) {
+                        throw Exception("Doesn't find any user with this UID")
+                    }
+                    doc
+                }
             }
 
             val friendUid = friendSnap.id
@@ -126,7 +146,6 @@ class FirestoreFriendStorage {
                 onUpdate(list)
             }
     }
-
 
     fun listenFriendRequests(
         uid: String,
@@ -212,31 +231,6 @@ class FirestoreFriendStorage {
         } catch (e: Exception) {
             Log.e("FirestoreFriendStorage", "acceptFriendRequest failed: ${e.message}", e)
             Result.failure(e)
-        }
-    }
-
-    /**
-     * 一次性获取当前用户的好友列表（不是实时监听）
-     */
-    suspend fun fetchFriendsOnce(uid: String): List<Friend> {
-        return try {
-            val snap = friendsCol(uid)
-                .orderBy("since", Query.Direction.ASCENDING)
-                .get()
-                .await()
-
-            snap.documents.mapNotNull { d ->
-                val fid = d.getString("uid") ?: return@mapNotNull null
-                Friend(
-                    uid = fid,
-                    name = d.getString("name") ?: "",
-                    avatarUri = d.getString("avatarUri"),
-                    since = d.getLong("since") ?: 0L
-                )
-            }
-        } catch (e: Exception) {
-            Log.e("FirestoreFriendStorage", "fetchFriendsOnce failed: ${e.message}", e)
-            emptyList()
         }
     }
 
