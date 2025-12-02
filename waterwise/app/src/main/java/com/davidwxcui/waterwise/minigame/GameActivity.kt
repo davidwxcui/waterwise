@@ -32,9 +32,9 @@ private lateinit var btnGameRanking: ImageButton
 // ================== DATA MODELS ==================
 
 data class PlayerState(
-    val coins: Int = 10000,
+    val coins: Int = 50000,
     val position: Int = 0,
-    val diceLeft: Int = 0,
+    val diceLeft: Int = 10,
     val ownedProperties: List<String> = emptyList()
 )
 
@@ -294,6 +294,10 @@ class GameActivity : AppCompatActivity() {
                 }
                 else -> false
             }
+            R.id.menu_how_to_play -> {
+                showHowToPlayDialog(); true
+            }
+            else -> super.onOptionsItemSelected(item)
         }
         popup.show()
     }
@@ -428,6 +432,32 @@ class GameActivity : AppCompatActivity() {
             dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
         }
     }
+
+
+
+    private fun showHowToPlayDialog() {
+        val msg = """
+        • Each player starts with 50,000 coins and 10 dice.
+        • Tap "Roll dice" to move forward on the outer ring of the board.
+        • When you land on a property tile:
+          - If nobody owns it, you can buy it and get income every turn.
+          - If you land on your own property, nothing happens.
+          - If you land on someone else's property, you must pay rent.
+        • When you land on a random event tile, choose one of the options and the result will
+          add or subtract coins based on the success rate.
+        • At the end of each turn you also get income from all properties you own.
+        • If your coins drop below 0, you go bankrupt and will automatically leave the room.
+        • Every day you can receive extra dice based on how much water you drank yesterday.
+    """.trimIndent()
+
+        showGameMessageDialog(
+            iconRes = R.drawable.ic_dice,
+            title = "How to Play",
+            message = msg
+        )
+    }
+
+
 
 
 
@@ -1471,9 +1501,9 @@ class GameActivity : AppCompatActivity() {
         saveRoomBoard()
 
         playerState = PlayerState(
-            coins = 10000,
+            coins = 50000,
             position = 0,
-            diceLeft = 0,
+            diceLeft = 10,
             ownedProperties = emptyList()
         )
         updateUI()
@@ -1533,9 +1563,9 @@ class GameActivity : AppCompatActivity() {
                 .await()
 
             if (playerSnap.exists()) {
-                val coins = playerSnap.getLong("coins")?.toInt() ?: 10000
+                val coins = playerSnap.getLong("coins")?.toInt() ?: 50000
                 val position = playerSnap.getLong("position")?.toInt() ?: 0
-                val diceLeft = playerSnap.getLong("diceLeft")?.toInt() ?: 0
+                val diceLeft = playerSnap.getLong("diceLeft")?.toInt() ?: 10
                 val ownedPropsAny = playerSnap.get("ownedProperties") as? List<*>
                 val ownedProps = ownedPropsAny?.mapNotNull { it as? String } ?: emptyList()
 
@@ -1638,13 +1668,10 @@ class GameActivity : AppCompatActivity() {
 
         userDocRef.get()
             .addOnSuccessListener { snap ->
-                val highest = snap.getLong("highestcoins") ?: 0L
-                if (currentCoins > highest) {
-                    val data = hashMapOf(
-                        "highestcoins" to currentCoins
-                    )
-                    userDocRef.set(data, SetOptions.merge())
-                }
+                val data = hashMapOf(
+                    "highestcoins" to currentCoins
+                )
+                userDocRef.set(data, SetOptions.merge())
             }
             .addOnFailureListener {
             }
