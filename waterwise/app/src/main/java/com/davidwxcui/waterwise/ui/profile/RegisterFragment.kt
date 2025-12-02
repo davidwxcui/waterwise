@@ -1,6 +1,7 @@
 package com.davidwxcui.waterwise.ui.profile
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.util.Patterns
 import android.view.LayoutInflater
@@ -10,7 +11,9 @@ import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.davidwxcui.waterwise.data.OnboardingPreferences
 import com.davidwxcui.waterwise.databinding.FragmentRegisterBinding
+import com.davidwxcui.waterwise.ui.onboarding.OnboardingActivity
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 import java.security.MessageDigest
@@ -220,8 +223,19 @@ class RegisterFragment : Fragment() {
                 ProfilePrefs.save(requireContext(), blankProfile)
 
                 Snackbar.make(binding.root, "Register successful", Snackbar.LENGTH_SHORT).show()
-                findNavController().popBackStack() // back to Login
-                findNavController().popBackStack() // back to Profile
+
+                // Check if onboarding is completed
+                val onboardingPrefs = OnboardingPreferences(requireContext())
+                if (!onboardingPrefs.isOnboardingCompleted()) {
+                    // Launch onboarding activity immediately
+                    val intent = Intent(requireContext(), OnboardingActivity::class.java)
+                    startActivity(intent)
+                    requireActivity().finish()
+                } else {
+                    // Just go back to profile
+                    findNavController().popBackStack() // back to Login
+                    findNavController().popBackStack() // back to Profile
+                }
             }.invokeOnCompletion {
                 binding.btnRegister.isEnabled = true
             }

@@ -8,13 +8,12 @@
 
     <ImageButton
         android:id="@+id/btn_back"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
         android:layout_marginTop="8dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/content_desc_go_back"
-        android:src="@android:drawable/ic_menu_close_clear_cancel"
-        android:tint="?android:attr/textColorPrimary"
+        android:src="@drawable/ic_arrow_back"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -23,7 +22,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="2/10"
+        android:text="1/9"
         android:textColor="?attr/colorPrimary"
         android:textSize="14sp"
         app:layout_constraintEnd_toEndOf="parent"
@@ -34,7 +33,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="60dp"
-        android:text="What's your gender?"
+        android:text="May we know your gender?"
         android:textColor="?android:attr/textColorPrimary"
         android:textSize="26sp"
         android:textStyle="bold"
@@ -47,7 +46,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="This helps us calculate your optimal water intake"
+        android:text="This helps us personalize your optimal water intake"
         android:textColor="?android:attr/textColorSecondary"
         android:textSize="15sp"
         app:layout_constraintEnd_toEndOf="parent"

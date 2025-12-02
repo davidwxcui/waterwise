@@ -8,13 +8,12 @@
 
     <ImageButton
         android:id="@+id/btn_back"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
         android:layout_marginTop="8dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/content_desc_go_back"
-        android:src="@android:drawable/ic_menu_close_clear_cancel"
-        android:tint="?android:attr/textColorPrimary"
+        android:src="@drawable/ic_arrow_back"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -34,7 +33,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="60dp"
-        android:text="Vegetables &amp; fruits intake?"
+        android:text="How often do you eat fruits and vegetables?"
         android:textColor="?android:attr/textColorPrimary"
         android:textSize="26sp"
         android:textStyle="bold"
@@ -47,7 +46,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="They have high water content and contribute to hydration"
+        android:text="These foods have high water content and help with hydration"
         android:textColor="?android:attr/textColorSecondary"
         android:textSize="15sp"
         app:layout_constraintEnd_toEndOf="parent"
