@@ -97,16 +97,17 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun completeOnboarding() {
-        // Save user profile
+        // Save user profile to OnboardingPreferences
         onboardingPrefs.saveUserProfile(userProfile)
         // Mark onboarding as completed
         onboardingPrefs.setOnboardingCompleted(true)
-    }
-        // Save user profile to OnboardingPreferences
-    fun nextStep() {
 
         // Also save to ProfilePrefs for consistency
         val context = getApplication<Application>()
+
+        // Load existing profile to get name and email from registration
+        val existingProfile = com.davidwxcui.waterwise.ui.profile.ProfilePrefs.load(context)
+
         val weightKg = userProfile.weight?.let {
             userProfile.weightUnit.toKg(it).toInt()
         } ?: 70
@@ -131,10 +132,10 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
 
         val activityFreqLabel = userProfile.trainingFrequency?.daysPerWeek ?: "3-5 days/week"
 
-        // Create Profile object and save to ProfilePrefs
+        // Create Profile object and save to ProfilePrefs, preserving name and email from registration
         val profile = com.davidwxcui.waterwise.ui.profile.Profile(
-            name = userProfile.name ?: "Alex Johnson",
-            email = userProfile.email ?: "alex.johnson@email.com",
+            name = existingProfile.name,
+            email = existingProfile.email,
             age = 28,
             sex = sex,
             heightCm = heightCm,
@@ -143,7 +144,9 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
             activityFreqLabel = activityFreqLabel
         )
         com.davidwxcui.waterwise.ui.profile.ProfilePrefs.save(context, profile)
+    }
 
+    fun nextStep() {
         _currentStep.value = (_currentStep.value ?: 0) + 1
     }
 
