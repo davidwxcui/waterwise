@@ -90,6 +90,12 @@ class EditProfileFragment : Fragment() {
 
         // Load Profile
         val cur = ProfilePrefs.load(requireContext())
+        val isLoggedIn = FirebaseAuthRepository.currentUid() != null
+        if (isLoggedIn) {
+            binding.etEmail.isEnabled = false
+            binding.etEmail.isFocusable = false
+            binding.etEmail.isFocusableInTouchMode = false
+        }
 
         selectedAvatarUri = cur.avatarUri?.let { raw ->
             if (raw.isBlank()) return@let null
@@ -238,9 +244,21 @@ class EditProfileFragment : Fragment() {
         }
     }
 
+
     private fun doSave(cur: Profile) {
         val name = binding.etName.text?.toString()?.trim().orEmpty()
-        val email = binding.etEmail.text?.toString()?.trim().orEmpty()
+
+        // 👉 先判断是否登录
+        val uid = FirebaseAuthRepository.currentUid()
+        val isLoggedIn = uid != null
+
+        // 👉 登录状态：强制用原来的 email；未登录：用输入框里的
+        val email = if (isLoggedIn) {
+            cur.email
+        } else {
+            binding.etEmail.text?.toString()?.trim().orEmpty()
+        }
+
         val age = binding.etAge.text?.toString()?.toIntOrNull()
         val height = binding.etHeight.text?.toString()?.toIntOrNull()
         val weight = binding.etWeight.text?.toString()?.toIntOrNull()
@@ -252,11 +270,13 @@ class EditProfileFragment : Fragment() {
             return
         }
 
-        // Email format check
-        if (email.isBlank() || !Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            binding.etEmail.error = "Invalid email"
-            toast("Please enter a valid email")
-            return
+        // 👉 只有“未登录”的时候才校验邮箱格式
+        if (!isLoggedIn) {
+            if (email.isBlank() || !Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                binding.etEmail.error = "Invalid email"
+                toast("Please enter a valid email")
+                return
+            }
         }
 
         if (age == null || age !in 5..100) {
@@ -294,7 +314,7 @@ class EditProfileFragment : Fragment() {
             avatarUri = cur.avatarUri
         )
 
-        val uid = FirebaseAuthRepository.currentUid()
+        // ⚠️ 这里不要再重新声明 uid，直接用前面那个
         if (uid.isNullOrBlank()) {
             val localAvatarStr = newAvatarLocalUri?.toString() ?: cur.avatarUri
             val localProfile = baseProfile.copy(avatarUri = localAvatarStr)
@@ -347,6 +367,7 @@ class EditProfileFragment : Fragment() {
             }
         }
     }
+
 
     // Upload to Firebase Storage，return URL（if fail return null）
     private suspend fun uploadAvatarToFirebase(uid: String, uri: Uri): String? {
