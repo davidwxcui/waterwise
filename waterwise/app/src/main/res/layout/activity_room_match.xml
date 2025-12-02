@@ -1,146 +1,203 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#FFFFFF"
+    android:padding="16dp">
+
+    <androidx.core.widget.NestedScrollView
     android:id="@+id/roomRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
     android:clipToPadding="false"
-    android:paddingTop="16dp"
-    android:paddingBottom="16dp"
-    android:paddingStart="24dp"
-    android:paddingEnd="24dp"
-    android:background="@drawable/bg_game_root">
+    android:background="#FFFFFF">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
-
-        <!-- 顶部标题 -->
-        <TextView
-            android:id="@+id/tvTitleMatch"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Online Room"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:textColor="@android:color/white"
-            android:gravity="center_horizontal"
-            android:layout_marginBottom="8dp" />
-
-        <!-- UID 展示卡片 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/bg_hud_panel"
-            android:padding="12dp"
-            android:layout_marginBottom="16dp"
-            android:gravity="center_vertical">
+            android:orientation="vertical">
 
+            <!-- 顶部标题 - Playful -->
             <TextView
-                android:id="@+id/tvUid"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="UID: -"
-                android:textSize="14sp"
-                android:textColor="@android:color/white" />
-        </LinearLayout>
-
-        <!-- 创建 / 加入房间区域 -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="@drawable/bg_event_panel"
-            android:padding="16dp"
-            android:layout_marginBottom="16dp">
-
-            <TextView
+                android:id="@+id/tvTitleMatch"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Create or join a room with friends."
-                android:textColor="@android:color/white"
-                android:textSize="14sp"
-                android:layout_marginBottom="12dp" />
-
-            <!-- Room ID -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Room ID"
-                android:textColor="#E0FFFFFF"
-                android:textSize="13sp"
+                android:text="🎮 Online Room"
+                android:textSize="32sp"
+                android:textStyle="bold"
+                android:textColor="#0097A7"
+                android:gravity="start"
                 android:layout_marginBottom="4dp" />
 
-            <EditText
-                android:id="@+id/etRoomId"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="Enter room ID to join"
-                android:inputType="text"
-                android:background="@drawable/bg_input_game"
-                android:padding="10dp"
-                android:textColor="@android:color/white"
-                android:textColorHint="#80FFFFFF"
-                android:layout_marginBottom="12dp" />
-
-            <!-- Password -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Room password"
-                android:textColor="#E0FFFFFF"
-                android:textSize="13sp"
-                android:layout_marginBottom="4dp" />
+                android:text="Team up and dominate with friends!"
+                android:textSize="15sp"
+                android:textColor="#00838F"
+                android:gravity="start"
+                android:layout_marginBottom="24dp" />
 
-            <EditText
-                android:id="@+id/etPassword"
+            <!-- UID 展示卡片 - Vibrant -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Optional, leave empty if none"
-                android:inputType="textPassword"
-                android:background="@drawable/bg_input_game"
-                android:padding="10dp"
-                android:textColor="@android:color/white"
-                android:textColorHint="#80FFFFFF"
-                android:layout_marginBottom="16dp" />
+                android:background="#E0F7FA"
+                android:padding="16dp"
+                android:layout_marginBottom="24dp"
+                android:gravity="center_vertical"
+                android:elevation="2dp">
 
-            <Button
-                android:id="@+id/btnCreateRoom"
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="👤 Your Player ID"
+                        android:textSize="12sp"
+                        android:textColor="#0097A7"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:id="@+id/tvUid"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="-"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:textColor="#0097A7" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⭐"
+                    android:textSize="36sp" />
+            </LinearLayout>
+
+            <!-- 创建 / 加入房间区域 - Game-themed -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#F5F5F5"
+                android:padding="20dp"
+                android:layout_marginBottom="24dp"
+                android:elevation="2dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="⚔️ Create or Join Battle"
+                    android:textColor="#0097A7"
+                    android:textStyle="bold"
+                    android:textSize="20sp"
+                    android:layout_marginBottom="6dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Start a new arena or enter an existing one"
+                    android:textColor="#00838F"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="20dp" />
+
+                <!-- Room ID -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="🔓 Room ID"
+                    android:textColor="#0097A7"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
+                <EditText
+                    android:id="@+id/etRoomId"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:hint="Enter room code..."
+                    android:inputType="text"
+                    android:background="#FFFFFF"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp"
+                    android:textColor="#1A1A1A"
+                    android:textColorHint="#B0BEC5"
+                    android:textSize="15sp"
+                    android:layout_marginBottom="16dp" />
+
+                <!-- Password -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="🔐 Access Code"
+                    android:textColor="#0097A7"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
+                <EditText
+                    android:id="@+id/etPassword"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:hint="Optional - leave empty for open room"
+                    android:inputType="textPassword"
+                    android:background="#FFFFFF"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp"
+                    android:textColor="#1A1A1A"
+                    android:textColorHint="#B0BEC5"
+                    android:textSize="15sp"
+                    android:layout_marginBottom="20dp" />
+
+                <!-- Primary Button - Create -->
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnCreateRoom"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:text="✨ Create New Arena"
+                    android:textAllCaps="false"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:background="#0097A7"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- Secondary Button - Join -->
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnJoinRoom"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:text="🚀 Enter Battle"
+                    android:textAllCaps="false"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:background="#B2EBF2"
+                    android:textColor="#0097A7" />
+
+            </LinearLayout>
+
+            <!-- Back Button -->
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnBack"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
-                android:text="Create Room"
+                android:text="← Back"
                 android:textAllCaps="false"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:background="@drawable/bg_roll_button"
-                android:textColor="@android:color/white" />
-
-            <Button
-                android:id="@+id/btnJoinRoom"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:text="Join Room"
-                android:textAllCaps="false"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:background="@drawable/bg_roll_button"
-                android:textColor="@android:color/white"
-                android:layout_marginTop="10dp" />
+                android:textSize="18dp"
+                android:background="#F5F5F5"
+                android:textColor="#0097A7"
+                android:elevation="1dp" />
 
         </LinearLayout>
 
-        <Button
-            android:id="@+id/btnBack"
-            android:layout_width="match_parent"
-            android:layout_height="44dp"
-            android:text="Back"
-            android:textAllCaps="false"
-            android:textSize="14sp"
-            android:background="@drawable/bg_roll_button"
-            android:textColor="@android:color/white"
-            android:layout_marginTop="12dp" />
+    </androidx.core.widget.NestedScrollView>
 
-    </LinearLayout>
-
-</androidx.core.widget.NestedScrollView>
+</LinearLayout>
