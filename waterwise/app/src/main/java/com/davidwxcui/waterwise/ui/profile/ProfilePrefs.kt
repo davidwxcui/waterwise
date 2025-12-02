@@ -20,8 +20,8 @@ object ProfilePrefs {
             else -> ActivityLevel.SEDENTARY
         }
         return Profile(
-            name = p.getString("name", "Alex Johnson") ?: "",
-            email = p.getString("email", "alex.johnson@email.com") ?: "",
+            name = p.getString("name", " ") ?: "",
+            email = p.getString("email", " ") ?: "",
             age = p.getInt("age", 28),
             sex = sex,
             heightCm = p.getInt("heightCm", 175),
