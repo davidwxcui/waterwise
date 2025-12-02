@@ -34,7 +34,6 @@ class FirestoreFriendStorage {
         return s.contains("@") && s.contains(".")
     }
 
-
     suspend fun addFriendByQuery(myUid: String, query: String): Result<Unit> {
         return try {
             val trimmed = query.trim()
@@ -74,7 +73,6 @@ class FirestoreFriendStorage {
                     }
                     doc
                 }
-                doc
             }
 
             val friendUid = friendSnap.id
@@ -143,7 +141,6 @@ class FirestoreFriendStorage {
                 onUpdate(list)
             }
     }
-
 
     fun listenFriendRequests(
         uid: String,
