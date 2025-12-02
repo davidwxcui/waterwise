@@ -28,14 +28,7 @@ class DailyGoalResultFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Observe the daily goal
-        viewModel.dailyGoalMl.observe(viewLifecycleOwner) { goalMl ->
-            goalMl?.let {
-                val liters = it / 1000.0
-                binding.tvDailyGoal.text = String.format("%.1f L", liters)
-                binding.tvDailyGoalDetail.text = viewModel.getDailyGoalSummary()
-            }
-        }
+        // Daily goal views removed from layout - calculation still happens in background
 
         binding.btnFinish.setOnClickListener {
             // Complete onboarding and save data

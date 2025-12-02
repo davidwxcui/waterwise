@@ -14,7 +14,7 @@ class OnboardingPreferences(context: Context) {
     companion object {
         private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
         private const val KEY_NAME = "name"
-        private const val KEY_EMAIL = "email"
+        // Note: Email is not stored here - it comes from Firebase Authentication
         private const val KEY_GENDER = "gender"
         private const val KEY_WEIGHT = "weight"
         private const val KEY_WEIGHT_UNIT = "weight_unit"
@@ -41,7 +41,7 @@ class OnboardingPreferences(context: Context) {
             profile.gender?.let { putString(KEY_GENDER, it.name) }
             profile.weight?.let { putFloat(KEY_WEIGHT, it) }
             profile.name?.let { putString(KEY_NAME, it) }
-            profile.email?.let { putString(KEY_EMAIL, it) }
+            // Email is managed by Firebase Auth, not stored locally
             putString(KEY_WEIGHT_UNIT, profile.weightUnit.name)
             profile.height?.let { putFloat(KEY_HEIGHT, it) }
             putString(KEY_HEIGHT_UNIT, profile.heightUnit.name)
@@ -60,7 +60,7 @@ class OnboardingPreferences(context: Context) {
             gender = prefs.getString(KEY_GENDER, null)?.let { Gender.valueOf(it) },
             weight = if (prefs.contains(KEY_WEIGHT)) prefs.getFloat(KEY_WEIGHT, 0f) else null,
             name = prefs.getString(KEY_NAME, null),
-            email = prefs.getString(KEY_EMAIL, null),
+            email = null, // Email comes from Firebase Auth
             weightUnit = prefs.getString(KEY_WEIGHT_UNIT, null)?.let { WeightUnit.valueOf(it) } ?: WeightUnit.KG,
             height = if (prefs.contains(KEY_HEIGHT)) prefs.getFloat(KEY_HEIGHT, 0f) else null,
             heightUnit = prefs.getString(KEY_HEIGHT_UNIT, null)?.let { HeightUnit.valueOf(it) } ?: HeightUnit.CM,

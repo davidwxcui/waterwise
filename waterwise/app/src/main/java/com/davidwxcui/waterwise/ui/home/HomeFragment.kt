@@ -1,7 +1,6 @@
 package com.davidwxcui.waterwise.ui.home
 
 import android.app.AlertDialog
-import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.text.InputType
@@ -12,19 +11,18 @@ import android.widget.EditText
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.davidwxcui.waterwise.R
 import com.davidwxcui.waterwise.data.DrinkLog
 import com.davidwxcui.waterwise.data.DrinkType
 import com.davidwxcui.waterwise.databinding.FragmentHomeBinding
-import com.davidwxcui.waterwise.minigame.GameActivity
-import com.davidwxcui.waterwise.ui.profile.LocalAuthRepository
-import com.davidwxcui.waterwise.ui.profile.ProfilePrefs
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.roundToInt
+import android.content.Intent
+import com.davidwxcui.waterwise.minigame.RoomMatchActivity
+import androidx.navigation.fragment.findNavController
 
 class HomeFragment : Fragment() {
 
@@ -52,18 +50,6 @@ class HomeFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        val realProfile = ProfilePrefs.load(requireContext())
-        val displayName =
-            if (LocalAuthRepository.isLoggedIn(requireContext())
-                && realProfile.name.isNotBlank()
-            ) {
-                realProfile.name
-            } else {
-                "Guest"
-            }
-        binding.tvGreeting.text = "Hello, $displayName!"
-
         val dateText = if (Build.VERSION.SDK_INT >= 26) {
             LocalDateTime.now().format(DateTimeFormatter.ofPattern("EEE, MMM d"))
         } else {
@@ -75,17 +61,20 @@ class HomeFragment : Fragment() {
         binding.topTitle.text = getString(R.string.today_title, dateText)
 
         vm.uiState.observe(viewLifecycleOwner) { st ->
+            // 进度环
             binding.progressRing.set(
                 st.intakeMl.toFloat(),
                 st.goalMl.toFloat(),
                 st.overLimit
             )
 
+            // 百分比文字
             val progressPercent =
                 ((st.intakeMl.toDouble() / st.goalMl) * 100).roundToInt()
             binding.circularProgressPercent.text =
                 String.format(Locale.US, "%d%%", progressPercent)
 
+            // 文本信息
             binding.progressMain.text =
                 getString(R.string.progress_main, st.intakeMl, st.goalMl)
             binding.progressSub.text =
@@ -98,6 +87,8 @@ class HomeFragment : Fragment() {
                 else ->
                     getString(R.string.remaining_ml, (st.goalMl - st.intakeMl))
             }
+
+            // 线性进度条
             binding.ProgressBarValue.progress = progressPercent
             binding.ProgressBarValue.setProgress(progressPercent, true)
         }
@@ -117,6 +108,7 @@ class HomeFragment : Fragment() {
         bindQuick(binding.btnAlcohol, DrinkType.Alcohol)
         bindQuick(binding.btnSparkling, DrinkType.Sparkling)
 
+        // 智能建议卡片
         vm.uiState.observe(viewLifecycleOwner) { st ->
             val hour = nowHour()
             binding.insightCard.isVisible = true
@@ -131,6 +123,7 @@ class HomeFragment : Fragment() {
             }
         }
 
+        // 重要日子卡片
         vm.uiState.observe(viewLifecycleOwner) { st ->
             if (st.importantEvent != null &&
                 st.importantEvent.daysToEvent in 0..7
@@ -147,6 +140,7 @@ class HomeFragment : Fragment() {
             }
         }
 
+        // 今日时间线（这里换成弹窗编辑）
         timelineAdapter = TimelineAdapter(
             onEdit = { log: DrinkLog -> showEditDialog(log) },
             onDelete = { log: DrinkLog -> vm.deleteDrink(log.id) }
@@ -155,15 +149,14 @@ class HomeFragment : Fragment() {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = timelineAdapter
         }
-
         vm.timeline.observe(viewLifecycleOwner) { list ->
-            val ordered = list.sortedByDescending { it.timeMillis }
             val top5: List<DrinkLog> =
-                if (ordered.size > 5) ordered.subList(0, 5) else ordered
+                if (list.size > 5) list.subList(0, 5) else list
             timelineAdapter.submitList(top5)
-            binding.timelineEmpty.isVisible = ordered.isEmpty()
+            binding.timelineEmpty.isVisible = list.isEmpty()
         }
 
+        // 轻统计
         vm.summary.observe(viewLifecycleOwner) { s ->
             binding.donut.setData(
                 s.waterRatio,
@@ -177,16 +170,24 @@ class HomeFragment : Fragment() {
                 (s.sugaryRatio * 100).toInt()
             )
         }
+
         binding.btnGame.setOnClickListener {
-            startActivity(Intent(requireContext(), GameActivity::class.java))
+            startActivity(Intent(requireContext(), RoomMatchActivity::class.java))
         }
 
+        binding.btnGame.setOnClickListener {
+            startActivity(Intent(requireContext(), RoomMatchActivity::class.java))
+        }
+
+        binding.btnRanking.setOnClickListener {
+            findNavController().navigate(R.id.navigation_user_ranking)
+        }
         binding.btnFriends.setOnClickListener {
             findNavController().navigate(R.id.friendsFragment)
         }
     }
 
-    // Quick Add
+    // FAB 调用：选择饮品类型
     fun showFabQuickAdd() {
         val types = DrinkType.values()
         val labels = types.map { it.displayName }.toTypedArray()
@@ -198,7 +199,7 @@ class HomeFragment : Fragment() {
             .show()
     }
 
-    // Quantity Choose
+    // 选择容量（新增）
     private fun showQuantityDialog(type: DrinkType) {
         val options = vm.defaultPortionsFor(type)
         val labels = (options.map { "${it} ml" } +
@@ -223,7 +224,7 @@ class HomeFragment : Fragment() {
             .show()
     }
 
-    // Custom Input
+    // 自定义容量输入（新增）
     private fun showCustomInput(type: DrinkType) {
         val input = EditText(requireContext()).apply {
             inputType = InputType.TYPE_CLASS_NUMBER
@@ -280,6 +281,7 @@ class HomeFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        vm.refreshListeners()
+        vm.refreshListeners()   // ← 关键：重新挂监听 + 强制抓一次 drink logs
     }
+
 }

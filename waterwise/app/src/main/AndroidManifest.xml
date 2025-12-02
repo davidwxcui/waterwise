@@ -2,7 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="com.davidwxcui.waterwise">
-
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -15,10 +18,6 @@
         tools:replace="android:label,android:icon,android:roundIcon,android:theme">
 
         <activity
-            android:name=".ui.onboarding.OnboardingActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Waterwise" />
-        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
@@ -27,7 +26,41 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".minigame.GameActivity" />
+        <activity
+            android:name=".ui.onboarding.OnboardingActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Waterwise" />
+
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="shortService"
+            tools:node="merge" />
+        <receiver
+            android:name=".notifications.BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIME_CHANGED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+        <activity
+            android:name=".minigame.GameActivity"
+            android:label="@string/title_game"
+            android:theme="@style/Theme.Waterwise.Game"
+            android:exported="false" />
+        <activity
+        android:name=".minigame.RoomMatchActivity"
+        android:label="@string/title_match"
+        android:theme="@style/Theme.Waterwise.Game"
+        android:exported="false" />
+
+        <activity
+            android:name=".minigame.GameRankingActivity"
+            android:label="Game Ranking"
+            android:exported="false" />
     </application>
 
 </manifest>
