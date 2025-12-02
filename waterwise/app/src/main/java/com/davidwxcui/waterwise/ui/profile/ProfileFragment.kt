@@ -24,6 +24,7 @@ import com.davidwxcui.waterwise.utils.ReminderScheduler
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.firestore.FirebaseFirestore
+import android.net.Uri
 
 class ProfileFragment : Fragment() {
 

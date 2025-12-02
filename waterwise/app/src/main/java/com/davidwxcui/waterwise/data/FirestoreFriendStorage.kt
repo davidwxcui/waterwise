@@ -13,7 +13,6 @@ class FirestoreFriendStorage {
     private fun usersCol() = db.collection("users")
     private fun userDoc(uid: String) = usersCol().document(uid)
     private fun friendsCol(uid: String) = userDoc(uid).collection("friends")
-
     private fun friendRequestsCol(uid: String) = userDoc(uid).collection("friendRequests")
 
     data class Friend(
@@ -42,8 +41,8 @@ class FirestoreFriendStorage {
             }
 
             val friendSnap = when {
+                // Email
                 looksLikeEmail(trimmed) -> {
-                    // Use email to query
                     val q = usersCol()
                         .whereEqualTo("email", trimmed)
                         .limit(1)
@@ -54,8 +53,9 @@ class FirestoreFriendStorage {
                     }
                     q.documents.first()
                 }
-                looksLikeNumericUid(trimmed) -> {
-                    // Use numeric Uid to query
+
+                // Numeric ID
+                trimmed.all { it.isDigit() } -> {
                     val q = usersCol()
                         .whereEqualTo("numericUid", trimmed)
                         .limit(1)
@@ -66,6 +66,7 @@ class FirestoreFriendStorage {
                     }
                     q.documents.first()
                 }
+                // Firebase Uid
                 else -> {
                     val doc = userDoc(trimmed).get().await()
                     if (!doc.exists()) {
@@ -103,7 +104,8 @@ class FirestoreFriendStorage {
                         "avatarUri" to myAvatar,
                         "createdAt" to now
                     )
-                ).await()
+                )
+                .await()
 
             Result.success(Unit)
         } catch (e: Exception) {
