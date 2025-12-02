@@ -11,8 +11,8 @@ import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.davidwxcui.waterwise.R
 import com.davidwxcui.waterwise.databinding.FragmentFriendsBinding
 import com.davidwxcui.waterwise.ui.home.HomeViewModel
@@ -44,9 +44,18 @@ class FriendsFragment : Fragment() {
 
         adapter = FriendsAdapter(
             onRemoveClick = { friend ->
-                vm.removeFriend(friend.uid)
+                val displayName = friend.name.ifBlank { friend.uid }
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Remove friend")
+                    .setMessage("Remove $displayName from your friends list")
+                    .setPositiveButton("Remove") { _, _ ->
+                        vm.removeFriend(friend.uid)
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .show()
             }
         )
+
         binding.rvFriends.layoutManager = LinearLayoutManager(requireContext())
         binding.rvFriends.adapter = adapter
 
@@ -88,7 +97,7 @@ class FriendsFragment : Fragment() {
 
                 Toast.makeText(
                     requireContext(),
-                    "Friend request sent (or added directly)",
+                    "Friend request sent or added directly",
                     Toast.LENGTH_SHORT
                 ).show()
             }
