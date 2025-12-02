@@ -42,20 +42,37 @@ class FirestoreFriendStorage {
                 throw Exception("Please input Friend's UID or E-mail")
             }
 
-            val friendSnap = if (looksLikeEmail(trimmed)) {
-                val q = usersCol()
-                    .whereEqualTo("email", trimmed)
-                    .limit(1)
-                    .get()
-                    .await()
-                if (q.isEmpty) {
-                    throw Exception("Doesn't find any user with this email")
+            val friendSnap = when {
+                looksLikeEmail(trimmed) -> {
+                    // Use email to query
+                    val q = usersCol()
+                        .whereEqualTo("email", trimmed)
+                        .limit(1)
+                        .get()
+                        .await()
+                    if (q.isEmpty) {
+                        throw Exception("Doesn't find any user with this email")
+                    }
+                    q.documents.first()
                 }
-                q.documents.first()
-            } else {
-                val doc = userDoc(trimmed).get().await()
-                if (!doc.exists()) {
-                    throw Exception("Doesn't find any user with this UID")
+                looksLikeNumericUid(trimmed) -> {
+                    // Use numeric Uid to query
+                    val q = usersCol()
+                        .whereEqualTo("numericUid", trimmed)
+                        .limit(1)
+                        .get()
+                        .await()
+                    if (q.isEmpty) {
+                        throw Exception("Doesn't find any user with this UID")
+                    }
+                    q.documents.first()
+                }
+                else -> {
+                    val doc = userDoc(trimmed).get().await()
+                    if (!doc.exists()) {
+                        throw Exception("Doesn't find any user with this UID")
+                    }
+                    doc
                 }
                 doc
             }

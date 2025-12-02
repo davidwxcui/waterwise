@@ -7,7 +7,7 @@
     android:padding="8dp"
     android:gravity="center_vertical">
 
-    <!-- 左边：时间 -->
+    <!-- Time -->
     <TextView
         android:id="@+id/timeText"
         android:layout_width="wrap_content"
@@ -16,16 +16,16 @@
         android:textSize="15sp"
         android:textStyle="bold"
         android:textColor="@android:color/black"
-        android:layout_marginEnd="8dp" /> <!-- 原来 12dp，缩进少一点 -->
+        android:layout_marginEnd="8dp" />
 
-    <!-- 中间：饮品名 + Intake / Effective -->
+    <!-- Drink type + Intake / Effective -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:orientation="vertical">
 
-        <!-- 饮品名称 -->
+        <!-- Drink type -->
         <TextView
             android:id="@+id/titleText"
             android:layout_width="wrap_content"
@@ -35,7 +35,7 @@
             android:textStyle="bold"
             android:textColor="@android:color/black" />
 
-        <!-- Intake 行 -->
+        <!-- Intake -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -64,7 +64,7 @@
                 android:textColor="@android:color/black" />
         </LinearLayout>
 
-        <!-- Effective 行 -->
+        <!-- Effective -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -93,7 +93,7 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- 右边：Edit / Delete 按钮，字稍微变大一点 -->
+    <!-- Edit / Delete -->
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

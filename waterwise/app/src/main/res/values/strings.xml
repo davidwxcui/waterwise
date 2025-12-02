@@ -61,6 +61,8 @@
 
     <string name="title_match">Water Drinking Monopoly Matching</string>
     <string name="back">Back</string>
+    <string name="profile_avatar">Profile avatar</string>
+
 
     <!-- Drink Reminder -->
     <string name="reminder_title">Drink Reminder</string>

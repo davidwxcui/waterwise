@@ -195,7 +195,6 @@ class LoginFragment : Fragment() {
 
                         binding.tvLoginError.text = inlineMsg
                         binding.tvLoginError.visibility = View.VISIBLE
-                        // 这里不再额外弹 Snackbar，错误就出现在密码框下方
                     }
                 }
                 binding.btnLogin.isEnabled = true

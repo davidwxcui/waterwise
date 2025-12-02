@@ -14,7 +14,6 @@
         android:orientation="vertical"
         android:padding="20dp">
 
-        <!-- Header
         <TextView
             android:id="@+id/tvTitle"
             android:layout_width="wrap_content"
@@ -31,7 +30,7 @@
             android:text="Manage your hydration settings"
             android:textSize="13sp"
             android:textColor="#7A8A9A"
-            android:layout_marginTop="4dp"/>-->
+            android:layout_marginTop="4dp"/>
 
         <!-- Avatar / Name / Email -->
         <LinearLayout
@@ -43,9 +42,18 @@
             android:layout_marginBottom="8dp">
 
             <FrameLayout
+                android:id="@+id/avatarContainer"
                 android:layout_width="110dp"
                 android:layout_height="110dp"
                 android:background="@drawable/bg_avatar_gradient">
+
+                <ImageView
+                    android:id="@+id/ivAvatar"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:contentDescription="@string/profile_avatar"
+                    android:visibility="gone"/>
 
                 <TextView
                     android:id="@+id/tvAvatarInitial"

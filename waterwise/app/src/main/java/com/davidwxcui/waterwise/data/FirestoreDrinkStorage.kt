@@ -45,8 +45,6 @@ class FirestoreDrinkStorage {
             "YOGURT" -> DrinkType.Yogurt
             "ALCOHOL" -> DrinkType.Alcohol
             "SPARKLING" -> DrinkType.Sparkling
-
-            // 兼容旧命名/别名（防止你以前存过别的）
             "SPARKLING_WATER", "SPARKLINGWATER", "CARBONATED" -> DrinkType.Sparkling
             "SOFTDRINK", "POP" -> DrinkType.Soda
 
