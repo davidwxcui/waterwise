@@ -104,4 +104,9 @@ dependencies {
 
     // Google AI
     implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+
+    // WorkManager
+    implementation("androidx.work:work-runtime-ktx:2.8.1")
+
+    implementation("androidx.core:core:1.10.1")
 }
