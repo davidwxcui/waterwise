@@ -147,7 +147,7 @@ object FirebaseAuthRepository : AuthApi {
         )
     }
 
-    // 给用户分配 10 位数字 public id（numericUid）
+    // 10 bits public id（numericUid）
     private suspend fun ensureNumericUid(uid: String): String {
         return db.runTransaction { tx ->
             val userRef = db.collection("users").document(uid)
@@ -210,7 +210,7 @@ object FirebaseAuthRepository : AuthApi {
 
     // ---------- Firestore helpers ----------
     private suspend fun upsertUserProfile(uid: String, pf: Profile) {
-        val numericUid = ensureNumericUid(uid)  // 保证 public id 存在
+        val numericUid = ensureNumericUid(uid)
 
         val data = hashMapOf(
             "uid" to uid,

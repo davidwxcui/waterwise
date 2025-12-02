@@ -41,10 +41,9 @@ class FirestoreFriendStorage {
                 throw Exception("Please input Friend's UID or E-mail")
             }
 
-            // Seach friends by:
             val friendSnap = when {
-                // 1) email
                 looksLikeEmail(trimmed) -> {
+                    // Use email to query
                     val q = usersCol()
                         .whereEqualTo("email", trimmed)
                         .limit(1)
@@ -55,9 +54,8 @@ class FirestoreFriendStorage {
                     }
                     q.documents.first()
                 }
-
-                // numID
-                trimmed.all { it.isDigit() } -> {
+                looksLikeNumericUid(trimmed) -> {
+                    // Use numeric Uid to query
                     val q = usersCol()
                         .whereEqualTo("numericUid", trimmed)
                         .limit(1)
@@ -68,8 +66,6 @@ class FirestoreFriendStorage {
                     }
                     q.documents.first()
                 }
-
-                // uid in firebase
                 else -> {
                     val doc = userDoc(trimmed).get().await()
                     if (!doc.exists()) {
