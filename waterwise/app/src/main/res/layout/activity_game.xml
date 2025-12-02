@@ -1,162 +1,235 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/gameRoot"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#FFFFFF"
     android:fitsSystemWindows="true"
-    android:clipToPadding="false"
-    android:paddingTop="16dp"
-    android:paddingBottom="16dp"
-    android:paddingStart="12dp"
-    android:paddingEnd="12dp"
-    android:background="@drawable/bg_game_root">
+    android:padding="16dp">
 
-    <LinearLayout
-        android:orientation="vertical"
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/gameRoot"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:background="#FFFFFF">
 
-        <!-- 顶部 HUD：左金币 · 中排行榜 · 右剩余骰子 -->
         <LinearLayout
-            android:id="@+id/topHud"
+            android:orientation="vertical"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:background="@drawable/bg_hud_panel"
-            android:padding="12dp"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="12dp">
+            android:layout_height="wrap_content">
 
-            <!-- 左：金币区域（1/3） -->
-            <LinearLayout
-                android:layout_width="0dp"
+            <RelativeLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="start|center_vertical">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@drawable/ic_coin"
-                    android:contentDescription="@string/app_name"
-                    android:layout_marginEnd="6dp" />
+                android:layout_marginBottom="12dp">
 
                 <TextView
-                    android:id="@+id/tvCoins"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Coins: 0"
-                    android:textSize="18sp"
+                    android:text="WaterWise Adventure"
+                    android:textSize="20sp"
                     android:textStyle="bold"
-                    android:textColor="@android:color/white" />
-            </LinearLayout>
-
-            <!-- 中：游戏排行榜按钮（1/3） -->
-            <FrameLayout
-                android:layout_width="0dp"
-                android:layout_height="22dp"
-                android:layout_weight="1"
-                android:gravity="center">
+                    android:textColor="#0097A7"
+                    android:layout_centerVertical="true" />
 
                 <ImageButton
-                    android:id="@+id/btnGameRanking"
-                    android:layout_width="124dp"
-                    android:layout_height="32dp"
-                    android:background="@android:color/transparent"
-                    android:contentDescription="Game ranking"
-                    android:padding="0dp"
+                    android:id="@+id/btnMenu"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@android:drawable/ic_menu_more"
+                    android:tint="#0097A7"
                     android:scaleType="centerInside"
-                    android:src="@drawable/ic_gameranking" />
-            </FrameLayout>
+                    android:contentDescription="Menu" />
+            </RelativeLayout>
 
-            <!-- 右：骰子区域（1/3） -->
             <LinearLayout
-                android:layout_width="0dp"
+                android:id="@+id/topHud"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:background="#E0F7FA"
+                android:padding="14dp"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp"
+                android:elevation="2dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="start|center_vertical"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="💰 Balance"
+                        android:textSize="11sp"
+                        android:textColor="#0097A7"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="4dp" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <ImageView
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:src="@drawable/ic_coin"
+                            android:contentDescription="@string/app_name"
+                            android:layout_marginEnd="6dp"
+                            android:tint="#0097A7" />
+
+                        <TextView
+                            android:id="@+id/tvCoins"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="#0097A7" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <FrameLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center">
+
+                    <ImageButton
+                        android:id="@+id/btnGameRanking"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@android:color/transparent"
+                        android:contentDescription="Game ranking"
+                        android:padding="8dp"
+                        android:scaleType="centerInside"
+                        android:src="@drawable/ic_gameranking"
+                        android:tint="#0097A7" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🏆"
+                        android:textSize="20sp"
+                        android:layout_gravity="top|end"
+                        android:layout_marginTop="2dp"
+                        android:layout_marginEnd="2dp" />
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="end|center_vertical"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🎲 Rolls"
+                        android:textSize="11sp"
+                        android:textColor="#0097A7"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="4dp" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <ImageView
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:src="@drawable/ic_dice"
+                            android:contentDescription="@string/app_name"
+                            android:layout_marginEnd="6dp"
+                            android:tint="#0097A7" />
+
+                        <TextView
+                            android:id="@+id/tvDiceLeft"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="#0097A7" />
+                    </LinearLayout>
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <FrameLayout
+                android:id="@+id/boardContainer"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
                 android:layout_weight="1"
-                android:gravity="end|center_vertical">
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="12dp"
+                android:background="#F5F5F5"
+                android:padding="6dp"
+                android:elevation="1dp">
 
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@drawable/ic_dice"
-                    android:contentDescription="@string/app_name"
-                    android:layout_marginEnd="6dp" />
-
-                <TextView
-                    android:id="@+id/tvDiceLeft"
+                <GridLayout
+                    android:id="@+id/boardGrid"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Dice left: 0"
+                    android:rowCount="8"
+                    android:columnCount="5"
+                    android:layout_gravity="center" />
+
+                <ImageView
+                    android:id="@+id/diceImageView"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/dice_1"
+                    android:elevation="4dp" />
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/tvEvent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:textColor="#0097A7"
+                android:background="#E0F7FA"
+                android:padding="12dp"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="12dp"
+                android:text="🎮 Roll the dice to start your adventure!"
+                android:elevation="1dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal">
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnRollDice"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:text="🎲 Roll the Dice"
+                    android:textAllCaps="false"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:textColor="@android:color/white" />
+                    android:background="#0097A7"
+                    android:textColor="#FFFFFF"
+                    android:elevation="2dp" />
             </LinearLayout>
 
         </LinearLayout>
 
-        <!-- 棋盘区域 -->
-        <FrameLayout
-            android:id="@+id/boardContainer"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:layout_marginTop="4dp"
-            android:layout_marginBottom="12dp"
-            android:background="@drawable/bg_board_panel"
-            android:padding="6dp">
+    </androidx.core.widget.NestedScrollView>
 
-            <GridLayout
-                android:id="@+id/boardGrid"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:rowCount="8"
-                android:columnCount="5"
-                android:layout_gravity="center" />
-
-            <ImageView
-                android:id="@+id/diceImageView"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:layout_gravity="center"
-                android:src="@drawable/dice_1"
-                android:elevation="4dp" />
-        </FrameLayout>
-
-        <!-- 事件描述区域 -->
-        <TextView
-            android:id="@+id/tvEvent"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="14sp"
-            android:textColor="@android:color/white"
-            android:background="@drawable/bg_event_panel"
-            android:padding="12dp"
-            android:layout_marginTop="4dp"
-            android:layout_marginBottom="12dp"
-            android:text="Roll the dice to start your adventure!" />
-
-        <!-- Roll Dice 大按钮 -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center_horizontal">
-
-            <Button
-                android:id="@+id/btnRollDice"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:text="Roll Dice"
-                android:textAllCaps="false"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:drawableStart="@drawable/ic_dice"
-                android:drawablePadding="8dp"
-                android:background="@drawable/bg_roll_button"
-                android:textColor="@android:color/white" />
-        </LinearLayout>
-
-    </LinearLayout>
-
-</androidx.core.widget.NestedScrollView>
+</LinearLayout>
