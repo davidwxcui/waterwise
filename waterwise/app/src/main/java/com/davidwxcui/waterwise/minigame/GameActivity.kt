@@ -26,6 +26,8 @@ import kotlinx.coroutines.tasks.await
 import kotlin.random.Random
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.view.View
+import android.view.ContextThemeWrapper
 private lateinit var btnGameRanking: ImageButton
 // ================== DATA MODELS ==================
 
@@ -184,11 +186,13 @@ class GameActivity : AppCompatActivity() {
     private val tileContainers = mutableListOf<LinearLayout>()
     private val tileIconViews = mutableListOf<ImageView>()
     private val tileEvents = mutableMapOf<Int, TileEventTemplate>()
-
+    private lateinit var btnGameRanking: ImageButton
+    private lateinit var btnMenu: ImageButton
     // ---------- Lifecycle ----------
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        supportActionBar?.hide()
         setContentView(R.layout.activity_game)
 
         roomId = intent.getStringExtra(EXTRA_ROOM_ID) ?: ""
@@ -257,37 +261,45 @@ class GameActivity : AppCompatActivity() {
             intent.putExtra(EXTRA_ROOM_ID, roomId)
             startActivity(intent)
         }
+        btnMenu = findViewById(R.id.btnMenu)
+        btnMenu.setOnClickListener { view ->
+            showCustomMenu(view)
+        }
     }
 
     // ---------- Top-right menu ----------
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.menu_game, menu)
-        return true
-    }
+    private fun showCustomMenu(view: View) {
+        val wrapper = ContextThemeWrapper(this, R.style.PopupMenuBlack)
+        val popup = PopupMenu(wrapper, view)
+        // Ensure you have res/menu/menu_game.xml
+        popup.menuInflater.inflate(R.menu.menu_game, popup.menu)
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.menu_room_id -> {
-                showRoomIdDialog(); true
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.menu_room_id -> {
+                    showRoomIdDialog(); true
+                }
+                R.id.menu_members -> {
+                    showRoomMembersDialog(); true
+                }
+                R.id.menu_leave_room -> {
+                    promptLeaveRoom(); true
+                }
+                R.id.menu_home -> {
+                    goHome(); true
+                }
+                R.id.menu_player_colors -> {
+                    showPlayerColorsDialog(); true
+                }
+                R.id.menu_how_to_play -> {
+                    showHowToPlayDialog(); true
+                }
+                else -> super.onOptionsItemSelected(item)
             }
-            R.id.menu_members -> {
-                showRoomMembersDialog(); true
-            }
-            R.id.menu_leave_room -> {
-                promptLeaveRoom(); true
-            }
-            R.id.menu_home -> {
-                goHome(); true
-            }
-            R.id.menu_player_colors -> {
-                showPlayerColorsDialog(); true
-            }
-            R.id.menu_how_to_play -> {
-                showHowToPlayDialog(); true
-            }
-            else -> super.onOptionsItemSelected(item)
+
         }
+        popup.show()
     }
 
     private fun showRoomIdDialog() {
