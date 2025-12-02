@@ -1627,13 +1627,10 @@ class GameActivity : AppCompatActivity() {
 
         userDocRef.get()
             .addOnSuccessListener { snap ->
-                val highest = snap.getLong("highestcoins") ?: 0L
-                if (currentCoins > highest) {
-                    val data = hashMapOf(
-                        "highestcoins" to currentCoins
-                    )
-                    userDocRef.set(data, SetOptions.merge())
-                }
+                val data = hashMapOf(
+                    "highestcoins" to currentCoins
+                )
+                userDocRef.set(data, SetOptions.merge())
             }
             .addOnFailureListener {
             }
