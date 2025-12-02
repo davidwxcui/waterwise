@@ -13,13 +13,10 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
 import com.davidwxcui.waterwise.R
-import com.davidwxcui.waterwise.data.FirestoreFriendStorage
 import com.davidwxcui.waterwise.databinding.FragmentGameRankingBinding
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -30,15 +27,15 @@ class GameRankingFragment : Fragment() {
 
     private val auth by lazy { FirebaseAuth.getInstance() }
     private val firestore by lazy { FirebaseFirestore.getInstance() }
-    private val friendStorage by lazy { FirestoreFriendStorage() }
 
     private lateinit var adapter: GameRankingAdapter
+    private lateinit var roomId: String   // 当前房间 id
 
-    /** 排行作用域：好友(Room) / 全局(Global) */
+    /** 排行作用域：房间(Room) / 全局(Global) */
     private enum class Scope { ROOM, GLOBAL }
     private var currentScope: Scope = Scope.ROOM
 
-    // UI 用的数据模型（加了 avatarUrl）
+    // UI 用的数据模型
     data class GameRankingUI(
         val uid: String,
         val name: String,
@@ -47,6 +44,30 @@ class GameRankingFragment : Fragment() {
         val isMe: Boolean,
         val avatarUrl: String?
     )
+
+    companion object {
+        private const val ARG_ROOM_ID = "roomId"
+        private const val ROOMS_COLLECTION = "rooms"
+        private const val MEMBERS_SUBCOLLECTION = "members"
+
+        // 可选：如果你以后想用 arguments 的写法，可以用这个
+        fun newInstance(roomId: String): GameRankingFragment {
+            return GameRankingFragment().apply {
+                arguments = Bundle().apply {
+                    putString(ARG_ROOM_ID, roomId)
+                }
+            }
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // ① 优先从 arguments 取（如果你用 newInstance 传过来）
+        // ② 如果没有，就从宿主 Activity 的 Intent 里取 GameActivity.EXTRA_ROOM_ID
+        roomId = arguments?.getString(ARG_ROOM_ID)
+            ?: requireActivity().intent.getStringExtra(GameActivity.EXTRA_ROOM_ID).orEmpty()
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -129,6 +150,13 @@ class GameRankingFragment : Fragment() {
             return
         }
 
+        if (currentScope == Scope.ROOM && roomId.isEmpty()) {
+            adapter.submitList(emptyList())
+            binding.gameRankingEmpty.isVisible = true
+            binding.gameRankingEmpty.text = "Room ID not provided"
+            return
+        }
+
         viewLifecycleOwner.lifecycleScope.launch {
             binding.gameRankingEmpty.isVisible = false
 
@@ -155,14 +183,11 @@ class GameRankingFragment : Fragment() {
     }
 
     /**
-     * 全局排行榜：
-     * 直接查 games 集合，按 coins DESC，最多 10 条
-     * 只会显示真正玩过小游戏、在 games 里有文档的用户
+     * 全局排行榜（暂时还是用 games/{uid}.coins，这部分你以后可以按需要调整）
      */
-    /** 全局排行榜：所有 users 里的账号，按 games 里的 coins 排序，取前 10 个 */
     private suspend fun loadGlobalRanking(myUid: String): List<GameRankingUI> {
 
-        // 1. 先取所有用户（这里限制最多 50 个，根据你实际规模可以调）
+        // 1. 取一批用户（这里先限制 20 个）
         val usersSnap = firestore.collection("users")
             .limit(20)
             .get()
@@ -207,89 +232,65 @@ class GameRankingFragment : Fragment() {
             }
     }
 
-
     /**
-     * Room 排行榜：
-     * 不再看 FirestoreRoomStorage，
-     * 而是：自己 + 所有好友，按 coins 排名
+     * Room 排行榜：当前房间 rooms/<roomId>/members 下的所有玩家，按 coins 排序
      */
-    /** Room 排行榜：自己 + 所有好友，按 coins 排名（显示名字） */
     private suspend fun loadRoomRanking(myUid: String): List<GameRankingUI> {
-        // 1. 取好友列表
-        val friends = friendStorage.fetchFriendsOnce(myUid)
+        if (roomId.isEmpty()) return emptyList()
 
-        // 2. 自己 + 好友们 的 uid 集合
-        val allUids = buildList {
-            add(myUid)
-            addAll(friends.map { it.uid })
-        }.distinct()
+        // 1. 读取 rooms/<roomId>/members 下所有玩家
+        val membersSnap = firestore.collection(ROOMS_COLLECTION)
+            .document(roomId)
+            .collection(MEMBERS_SUBCOLLECTION)
+            .get()
+            .await()
 
-        if (allUids.isEmpty()) return emptyList()
-
-        // 3. 先把“我自己”的 profile 从 users 取出来（name、avatarUri）
-        val myUserSnap = firestore.collection("users").document(myUid).get().await()
-        val myNameFromUsers = myUserSnap.getString("name")
-        val myAvatarFromUsers = myUserSnap.getString("avatarUri")
+        if (membersSnap.isEmpty) return emptyList()
 
         val tmp = mutableListOf<GameRankingUI>()
 
-        // 4. 逐个 uid 读取 games 里的 coins，再决定用什么名字、头像
-        for (uid in allUids) {
-            val gameDoc = firestore.collection("games").document(uid).get().await()
-            val coins = gameDoc.getLong("coins") ?: 0L
+        // 2. 对每个 member 读 coins + 用户信息
+        for (memberDoc in membersSnap.documents) {
+            val uid = memberDoc.id
+            val coins = memberDoc.getLong("coins") ?: 0L
 
-            val friend = friends.firstOrNull { it.uid == uid }
+            // 用户信息从 users/<uid> 里拿 name / avatarUri
+            val userSnap = try {
+                firestore.collection("users")
+                    .document(uid)
+                    .get()
+                    .await()
+            } catch (_: Exception) {
+                null
+            }
 
-            // 名字优先级：
-            //  - 如果是自己：users.name -> games.displayName -> uid
-            //  - 如果是好友：friends.name -> games.displayName -> uid
             val name = when {
-                uid == myUid ->
-                    myNameFromUsers
-                        ?: gameDoc.getString("displayName")
+                userSnap != null && userSnap.exists() ->
+                    userSnap.getString("name")
+                        ?: userSnap.getString("displayName")
                         ?: uid
-
-                friend != null ->
-                    friend.name.ifBlank {
-                        gameDoc.getString("displayName") ?: uid
-                    }
-
-                else ->
-                    gameDoc.getString("displayName") ?: uid
+                else -> uid
             }
 
-            // 头像优先级：
-            //  - 自己：users.avatarUri -> games.avatarUrl
-            //  - 好友：friends.avatarUri -> games.avatarUrl
-            val avatarUrl = when {
-                uid == myUid ->
-                    myAvatarFromUsers ?: gameDoc.getString("avatarUrl")
-
-                friend != null ->
-                    friend.avatarUri ?: gameDoc.getString("avatarUrl")
-
-                else ->
-                    gameDoc.getString("avatarUrl")
-            }
+            val avatarUrl = userSnap?.getString("avatarUri")
 
             tmp += GameRankingUI(
                 uid = uid,
                 name = name,
                 coins = coins,
-                rank = 0,                 // 先占位，后面统一写 rank
+                rank = 0,                  // 先占位，后面统一写 rank
                 isMe = (uid == myUid),
                 avatarUrl = avatarUrl
             )
         }
 
-        // 5. 按 coins DESC 排序，并写入 rank
+        // 3. 按 coins DESC 排序并写入 rank
         return tmp
             .sortedByDescending { it.coins }
             .mapIndexed { index, item ->
                 item.copy(rank = index + 1)
             }
     }
-
 
     // ---------------- Adapter ----------------
 
@@ -328,20 +329,17 @@ class GameRankingFragment : Fragment() {
                 tvName.text = if (item.isMe) "${item.name} (You)" else item.name
                 tvCoins.text = "Coins: ${item.coins}"
 
-                // 只让第 1 名显示奖杯，其它名次不显示图标
+                // 第 1 名用奖杯图标，其它名次隐藏图标
                 if (item.rank == 1) {
                     imgAvatar.visibility = View.VISIBLE
-                    imgAvatar.setImageResource(R.drawable.ic_gameranking) // 你现在用的奖杯图标
+                    imgAvatar.setImageResource(R.drawable.ic_gameranking)
                 } else {
-                    // 不想占位就用 GONE；想保留布局占位就用 INVISIBLE
                     imgAvatar.visibility = View.INVISIBLE
                 }
 
                 tvMeTag.isVisible = item.isMe
             }
-
         }
-
     }
 
     override fun onDestroyView() {

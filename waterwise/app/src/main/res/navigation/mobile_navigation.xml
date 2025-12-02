@@ -102,6 +102,7 @@
             app:destination="@id/navigation_home" />
     </fragment>
 
+
     <fragment
         android:id="@+id/gameRankingFragment"
         android:name="com.davidwxcui.waterwise.minigame.GameRankingFragment"

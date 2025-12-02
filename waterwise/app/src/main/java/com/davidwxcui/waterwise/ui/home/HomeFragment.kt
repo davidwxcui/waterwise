@@ -22,6 +22,7 @@ import java.util.Locale
 import kotlin.math.roundToInt
 import android.content.Intent
 import com.davidwxcui.waterwise.minigame.RoomMatchActivity
+import androidx.navigation.fragment.findNavController
 
 class HomeFragment : Fragment() {
 
@@ -173,6 +174,15 @@ class HomeFragment : Fragment() {
         binding.btnGame.setOnClickListener {
             startActivity(Intent(requireContext(), RoomMatchActivity::class.java))
         }
+
+        binding.btnGame.setOnClickListener {
+            startActivity(Intent(requireContext(), RoomMatchActivity::class.java))
+        }
+
+        binding.btnRanking.setOnClickListener {
+            findNavController().navigate(R.id.navigation_user_ranking)
+        }
+
     }
 
     // FAB 调用：选择饮品类型
