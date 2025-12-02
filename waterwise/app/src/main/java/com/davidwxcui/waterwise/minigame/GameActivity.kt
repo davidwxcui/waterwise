@@ -292,12 +292,12 @@ class GameActivity : AppCompatActivity() {
                 R.id.menu_player_colors -> {
                     showPlayerColorsDialog(); true
                 }
-                else -> false
+                R.id.menu_how_to_play -> {
+                    showHowToPlayDialog(); true
+                }
+                else -> super.onOptionsItemSelected(item)
             }
-            R.id.menu_how_to_play -> {
-                showHowToPlayDialog(); true
-            }
-            else -> super.onOptionsItemSelected(item)
+
         }
         popup.show()
     }
