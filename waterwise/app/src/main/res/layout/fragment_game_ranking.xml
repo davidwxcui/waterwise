@@ -19,10 +19,12 @@
 
             <ImageButton
                 android:id="@+id/btnBackGameRanking"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:background="@android:color/transparent"
-                android:src="@android:drawable/ic_media_previous" />
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginTop="2dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/content_desc_go_back"
+                android:src="@drawable/ic_arrow_back" />
 
             <TextView
                 android:layout_width="0dp"
