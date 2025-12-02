@@ -5,30 +5,20 @@
     android:id="@+id/onboarding_navigation"
     app:startDestination="@+id/welcomeFragment">
 
+    <!-- Page 1: Welcome -->
     <fragment
         android:id="@+id/welcomeFragment"
         android:name="com.davidwxcui.waterwise.ui.onboarding.WelcomeFragment"
         android:label="Welcome"
         tools:layout="@layout/fragment_welcome">
         <action
-            android:id="@+id/action_welcome_to_userInfo"
-            app:destination="@id/userInfoFragment"
-            app:enterAnim="@android:anim/slide_in_left"
-            app:exitAnim="@android:anim/slide_out_right" />
-    </fragment>
-
-    <fragment
-        android:id="@+id/userInfoFragment"
-        android:name="com.davidwxcui.waterwise.ui.onboarding.UserInfoFragment"
-        android:label="User Info"
-        tools:layout="@layout/fragment_user_info">
-        <action
-            android:id="@+id/action_userInfo_to_gender"
+            android:id="@+id/action_welcome_to_gender"
             app:destination="@id/genderFragment"
             app:enterAnim="@android:anim/slide_in_left"
             app:exitAnim="@android:anim/slide_out_right" />
     </fragment>
 
+    <!-- Page 2: Gender Selection -->
     <fragment
         android:id="@+id/genderFragment"
         android:name="com.davidwxcui.waterwise.ui.onboarding.GenderFragment"
@@ -41,6 +31,7 @@
             app:exitAnim="@android:anim/slide_out_right" />
     </fragment>
 
+    <!-- Page 3: Weight -->
     <fragment
         android:id="@+id/weightFragment"
         android:name="com.davidwxcui.waterwise.ui.onboarding.WeightFragment"
@@ -53,6 +44,7 @@
             app:exitAnim="@android:anim/slide_out_right" />
     </fragment>
 
+    <!-- Page 4: Height -->
     <fragment
         android:id="@+id/heightFragment"
         android:name="com.davidwxcui.waterwise.ui.onboarding.HeightFragment"
@@ -65,6 +57,7 @@
             app:exitAnim="@android:anim/slide_out_right" />
     </fragment>
 
+    <!-- Page 5: Training Frequency -->
     <fragment
         android:id="@+id/trainingFrequencyFragment"
         android:name="com.davidwxcui.waterwise.ui.onboarding.TrainingFrequencyFragment"
@@ -77,6 +70,7 @@
             app:exitAnim="@android:anim/slide_out_right" />
     </fragment>
 
+    <!-- Page 6: Caffeine Intake -->
     <fragment
         android:id="@+id/caffeineIntakeFragment"
         android:name="com.davidwxcui.waterwise.ui.onboarding.CaffeineIntakeFragment"
@@ -89,6 +83,7 @@
             app:exitAnim="@android:anim/slide_out_right" />
     </fragment>
 
+    <!-- Page 7: Vegetables Intake -->
     <fragment
         android:id="@+id/vegetablesIntakeFragment"
         android:name="com.davidwxcui.waterwise.ui.onboarding.VegetablesIntakeFragment"
@@ -101,6 +96,7 @@
             app:exitAnim="@android:anim/slide_out_right" />
     </fragment>
 
+    <!-- Page 8: Personal Goal Selection -->
     <fragment
         android:id="@+id/goalSelectionFragment"
         android:name="com.davidwxcui.waterwise.ui.onboarding.GoalSelectionFragment"
@@ -113,6 +109,7 @@
             app:exitAnim="@android:anim/slide_out_right" />
     </fragment>
 
+    <!-- Page 9: Goal Timeline -->
     <fragment
         android:id="@+id/goalTimelineFragment"
         android:name="com.davidwxcui.waterwise.ui.onboarding.GoalTimelineFragment"
@@ -125,6 +122,7 @@
             app:exitAnim="@android:anim/slide_out_right" />
     </fragment>
 
+    <!-- Page 10: Daily Goal Result -->
     <fragment
         android:id="@+id/dailyGoalResultFragment"
         android:name="com.davidwxcui.waterwise.ui.onboarding.DailyGoalResultFragment"

@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.findNavController
 import com.davidwxcui.waterwise.R
 import com.davidwxcui.waterwise.databinding.ActivityOnboardingBinding
+import com.davidwxcui.waterwise.ui.profile.FirebaseAuthRepository
 
 class OnboardingActivity : AppCompatActivity() {
 
@@ -12,6 +13,12 @@ class OnboardingActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Check if user is logged in before proceeding with onboarding
+        if (!FirebaseAuthRepository.isLoggedIn()) {
+            finish()
+            return
+        }
 
         binding = ActivityOnboardingBinding.inflate(layoutInflater)
         setContentView(binding.root)

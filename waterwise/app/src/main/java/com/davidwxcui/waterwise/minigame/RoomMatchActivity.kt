@@ -18,8 +18,17 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.tasks.await
 import com.davidwxcui.waterwise.MainActivity
 
-
 class RoomMatchActivity : AppCompatActivity() {
+
+    companion object {
+        // SharedPreferences file and keys for authentication state
+        private const val AUTH_FILE = "profile"
+        private const val KEY_UID = "uid"
+        private const val KEY_TOKEN = "auth_token"
+        private const val KEY_LOGGED_IN = "loggedIn"
+        private const val KEY_FAIL_COUNT = "fail_count"
+        private const val KEY_LOCK_UNTIL = "lock_until"
+    }
 
     private lateinit var tvUid: TextView
     private lateinit var etRoomId: EditText
@@ -29,7 +38,6 @@ class RoomMatchActivity : AppCompatActivity() {
     private lateinit var btnReenterRoom: Button
 
     private lateinit var btnBack: Button
-
 
     private val roomStorage by lazy { FirestoreRoomStorage() }
     private lateinit var uid: String
@@ -47,19 +55,19 @@ class RoomMatchActivity : AppCompatActivity() {
         btnJoinRoom = findViewById(R.id.btnJoinRoom)
         btnBack = findViewById(R.id.btnBack)
 
-
+        // Read login state + uid. If not logged in, finish this Activity.
         uid = loadUidFromLocal() ?: run {
-            Toast.makeText(this, "UID not found, please login first.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Please login first.", Toast.LENGTH_LONG).show()
             finish()
             return
         }
 
         tvUid.text = "UID: $uid"
 
-        // 1. 打开页面时自动尝试回房
+        // 1. When entering this page, automatically try to re-enter the last joined room
         autoReenterRoomIfNeeded()
 
-        // 2. 按钮：创建房间
+        // 2. Button: create room
         btnCreateRoom.setOnClickListener {
             val pwd = etPassword.text.toString()
             lifecycleScope.launch {
@@ -68,7 +76,11 @@ class RoomMatchActivity : AppCompatActivity() {
                 }
                 if (res.isSuccess) {
                     val roomId = res.getOrNull()!!
-                    Toast.makeText(this@RoomMatchActivity, "Create room: $roomId", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@RoomMatchActivity,
+                        "Create room: $roomId",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     openGame(roomId)
                 } else {
                     Toast.makeText(
@@ -80,7 +92,7 @@ class RoomMatchActivity : AppCompatActivity() {
             }
         }
 
-        // 3. 按钮：加入房间
+        // 3. Button: join room
         btnJoinRoom.setOnClickListener {
             val roomId = etRoomId.text.toString().trim()
             val pwd = etPassword.text.toString()
@@ -91,7 +103,7 @@ class RoomMatchActivity : AppCompatActivity() {
             }
 
             lifecycleScope.launch {
-                // 先检查人数
+                // First, check current member count
                 val canJoin = withContext(Dispatchers.IO) {
                     try {
                         val snap = firestore.collection("rooms")
@@ -99,9 +111,10 @@ class RoomMatchActivity : AppCompatActivity() {
                             .collection("members")
                             .get()
                             .await()
-                        snap.size() < 5   // 最多 5 人
+
+                        snap.size() < 5   // Max 5 players in a room
                     } catch (e: Exception) {
-                        true  // 出错时先允许加入，避免卡死
+                        true  // If checking fails, allow join to avoid blocking the user
                     }
                 }
 
@@ -114,12 +127,16 @@ class RoomMatchActivity : AppCompatActivity() {
                     return@launch
                 }
 
-                // 再真正调用 roomStorage.joinRoom
+                // Then actually call roomStorage.joinRoom
                 val res = withContext(Dispatchers.IO) {
                     roomStorage.joinRoom(uid, roomId, pwd)
                 }
                 if (res.isSuccess) {
-                    Toast.makeText(this@RoomMatchActivity, "Join success", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@RoomMatchActivity,
+                        "Join success",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     openGame(roomId)
                 } else {
                     Toast.makeText(
@@ -131,7 +148,6 @@ class RoomMatchActivity : AppCompatActivity() {
             }
         }
 
-
         btnBack.setOnClickListener {
             val intent = Intent(this, MainActivity::class.java)
             startActivity(intent)
@@ -139,31 +155,47 @@ class RoomMatchActivity : AppCompatActivity() {
         }
     }
 
-    /** 从 SharedPreferences 里读取 uid */
+    /**
+     * Read login state and uid from SharedPreferences.
+     * Only when KEY_LOGGED_IN is true do we treat the user as logged in.
+     */
     private fun loadUidFromLocal(): String? {
-        val sp = getSharedPreferences("profile", Context.MODE_PRIVATE)
-        return sp.getString("uid", null)
+        val sp = getSharedPreferences(AUTH_FILE, Context.MODE_PRIVATE)
+
+        // First, check explicit login state.
+        val loggedIn = sp.getBoolean(KEY_LOGGED_IN, false)
+        if (!loggedIn) {
+            // User is not logged in according to the auth flag;
+            // return null so caller can redirect the user to login.
+            return null
+        }
+
+        // Logged in: read uid from the same SharedPreferences file.
+        return sp.getString(KEY_UID, null)
     }
 
-    /** 自动重进：进入页面后自动调用一次 fetchCurrentRoomId */
+    /**
+     * Auto re-enter the last room: called once after entering this page.
+     * It uses fetchCurrentRoomId(uid) to find the room the user is currently in.
+     */
     private fun autoReenterRoomIfNeeded() {
         lifecycleScope.launch {
             val roomId = withContext(Dispatchers.IO) {
-                // FirestoreRoomStorage 提供的 API：fetchCurrentRoomId(uid): String?
+                // FirestoreRoomStorage API: fetchCurrentRoomId(uid): String?
                 roomStorage.fetchCurrentRoomId(uid)
             }
 
             if (!roomId.isNullOrEmpty()) {
-                // 这里你也可以先 Toast 一下提示玩家
+                // Optionally show a Toast here to notify the player
                 // Toast.makeText(this@RoomMatchActivity, "Auto re-enter room: $roomId", Toast.LENGTH_SHORT).show()
                 openGame(roomId)
-                // 直接关闭匹配页面，避免回退时再看到
+                // Close this page so that pressing back from the game will not show it again
                 finish()
             }
         }
     }
 
-    /** 跳转到游戏页面 */
+    /** Navigate to the game page */
     private fun openGame(roomId: String) {
         val intent = Intent(this, GameActivity::class.java)
         intent.putExtra(GameActivity.EXTRA_ROOM_ID, roomId)

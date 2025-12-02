@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.davidwxcui.waterwise.databinding.FragmentNotificationsBinding
 import kotlinx.coroutines.launch
 import java.util.*
+import android.util.Log
 
 class NotificationsFragment : Fragment() {
 
@@ -86,7 +87,6 @@ class NotificationsFragment : Fragment() {
         val month = calendar.get(Calendar.MONTH)
         val day = calendar.get(Calendar.DAY_OF_MONTH)
 
-        // Disable past dates
         val datePickerDialog = DatePickerDialog(requireContext(), { _, selectedYear, selectedMonth, selectedDay ->
             val selectedDate = String.format(
                 "%04d-%02d-%02d",

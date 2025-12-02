@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    app:cardCornerRadius="14dp"
+    app:cardElevation="2dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/remind_every"
+            android:textStyle="bold"
+            android:textColor="#1E2A3A"
+            android:textSize="16sp"/>
+
+        <!-- Predefined Intervals -->
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroupIntervals"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            app:singleSelection="true"
+            app:selectionRequired="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip30Min"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/interval_30_min"
+                android:tag="30"/>
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip1Hour"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/interval_1_hour"
+                android:tag="60"
+                android:checked="true"/>
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip1_5Hours"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/interval_1_5_hours"
+                android:tag="90"/>
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip2Hours"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/interval_2_hours"
+                android:tag="120"/>
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip3Hours"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/interval_3_hours"
+                android:tag="180"/>
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipCustomInterval"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/interval_custom"
+                android:tag="0"/>
+        </com.google.android.material.chip.ChipGroup>
+
+        <!-- Custom Interval Picker -->
+        <LinearLayout
+            android:id="@+id/layoutCustomInterval"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginTop="16dp"
+            android:visibility="gone">
+
+            <NumberPicker
+                android:id="@+id/pickerHours"
+                android:layout_width="0dp"
+                android:layout_height="150dp"
+                android:layout_weight="1"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/hours"
+                android:textSize="16sp"
+                android:textColor="#1E2A3A"
+                android:layout_marginHorizontal="8dp"/>
+
+            <NumberPicker
+                android:id="@+id/pickerMinutes"
+                android:layout_width="0dp"
+                android:layout_height="150dp"
+                android:layout_weight="1"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/minutes"
+                android:textSize="16sp"
+                android:textColor="#1E2A3A"
+                android:layout_marginStart="8dp"/>
+        </LinearLayout>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>
+

@@ -45,6 +45,10 @@
         <action
             android:id="@+id/action_profile_to_edit"
             app:destination="@id/navigation_edit_profile" />
+
+        <action
+            android:id="@+id/action_profile_to_reminder_settings"
+            app:destination="@id/navigation_reminder_settings" />
     </fragment>
 
     <fragment
@@ -70,6 +74,12 @@
         android:name="com.davidwxcui.waterwise.ui.profile.EditProfileFragment"
         android:label="Edit Profile"
         tools:layout="@layout/fragment_edit_profile" />
+
+    <fragment
+        android:id="@+id/navigation_reminder_settings"
+        android:name="com.davidwxcui.waterwise.ui.reminder.ReminderSettingsFragment"
+        android:label="@string/reminder_settings"
+        tools:layout="@layout/fragment_reminder_settings" />
 
     <!-- Global action accessible from any fragment -->
     <action

@@ -37,7 +37,8 @@ class TimelineAdapter(
         holder.b.timeText.text =
             android.text.format.DateFormat.format("HH:mm", item.timeMillis)
         holder.b.titleText.text = item.type.displayName
-        holder.b.detailText.text = "${item.volumeMl} ml  •  eff. ${item.effectiveMl} ml"
+        holder.b.tvIntakeValue.text = "${item.volumeMl} ml"
+        holder.b.tvEffectiveValue.text = "${item.effectiveMl} ml"
 
         holder.b.btnEdit.setOnClickListener { onEdit(item) }
         holder.b.btnDelete.setOnClickListener { onDelete(item) }

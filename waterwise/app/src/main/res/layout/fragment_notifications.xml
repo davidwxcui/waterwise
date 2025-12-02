@@ -42,6 +42,7 @@
                 android:textColor="#FFFFFF"
                 android:background="@drawable/rounded_blue_button"
                 android:layout_marginBottom="8dp" />
+
         </LinearLayout>
 
         <!-- RecyclerView -->

@@ -26,7 +26,7 @@ import kotlinx.coroutines.tasks.await
 import kotlin.random.Random
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
-private lateinit var btnGameRanking: ImageButton
+
 // ================== DATA MODELS ==================
 
 data class PlayerState(
@@ -257,6 +257,13 @@ class GameActivity : AppCompatActivity() {
             intent.putExtra(EXTRA_ROOM_ID, roomId)
             startActivity(intent)
         }
+    }
+
+    // ---------- Top-right menu ----------
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_game, menu)
+        return true
     }
 
     // ---------- Top-right menu ----------

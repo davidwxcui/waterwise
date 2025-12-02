@@ -1,6 +1,7 @@
 package com.davidwxcui.waterwise.ui.home
 
 import android.app.AlertDialog
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.text.InputType
@@ -11,18 +12,20 @@ import android.widget.EditText
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.davidwxcui.waterwise.R
 import com.davidwxcui.waterwise.data.DrinkLog
 import com.davidwxcui.waterwise.data.DrinkType
 import com.davidwxcui.waterwise.databinding.FragmentHomeBinding
+import com.davidwxcui.waterwise.minigame.GameActivity
+import com.davidwxcui.waterwise.minigame.RoomMatchActivity
+import com.davidwxcui.waterwise.ui.profile.LocalAuthRepository
+import com.davidwxcui.waterwise.ui.profile.ProfilePrefs
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.roundToInt
-import android.content.Intent
-import com.davidwxcui.waterwise.minigame.RoomMatchActivity
-import androidx.navigation.fragment.findNavController
 
 class HomeFragment : Fragment() {
 
@@ -50,6 +53,18 @@ class HomeFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        val realProfile = ProfilePrefs.load(requireContext())
+        val displayName =
+            if (LocalAuthRepository.isLoggedIn(requireContext())
+                && realProfile.name.isNotBlank()
+            ) {
+                realProfile.name
+            } else {
+                "Guest"
+            }
+        binding.tvGreeting.text = "Hello, $displayName!"
+
         val dateText = if (Build.VERSION.SDK_INT >= 26) {
             LocalDateTime.now().format(DateTimeFormatter.ofPattern("EEE, MMM d"))
         } else {
@@ -61,14 +76,12 @@ class HomeFragment : Fragment() {
         binding.topTitle.text = getString(R.string.today_title, dateText)
 
         vm.uiState.observe(viewLifecycleOwner) { st ->
-            // 进度环
             binding.progressRing.set(
                 st.intakeMl.toFloat(),
                 st.goalMl.toFloat(),
                 st.overLimit
             )
 
-            // 百分比文字
             val progressPercent =
                 ((st.intakeMl.toDouble() / st.goalMl) * 100).roundToInt()
             binding.circularProgressPercent.text =
@@ -170,22 +183,17 @@ class HomeFragment : Fragment() {
                 (s.sugaryRatio * 100).toInt()
             )
         }
-
         binding.btnGame.setOnClickListener {
             startActivity(Intent(requireContext(), RoomMatchActivity::class.java))
         }
 
-        binding.btnGame.setOnClickListener {
-            startActivity(Intent(requireContext(), RoomMatchActivity::class.java))
-        }
-
-        binding.btnRanking.setOnClickListener {
-            findNavController().navigate(R.id.navigation_user_ranking)
+        binding.btnFriends.setOnClickListener {
+            findNavController().navigate(R.id.friendsFragment)
         }
 
     }
 
-    // FAB 调用：选择饮品类型
+    // Quick Add
     fun showFabQuickAdd() {
         val types = DrinkType.values()
         val labels = types.map { it.displayName }.toTypedArray()
@@ -197,7 +205,7 @@ class HomeFragment : Fragment() {
             .show()
     }
 
-    // 选择容量（新增）
+    // 容量选择
     private fun showQuantityDialog(type: DrinkType) {
         val options = vm.defaultPortionsFor(type)
         val labels = (options.map { "${it} ml" } +
@@ -222,7 +230,7 @@ class HomeFragment : Fragment() {
             .show()
     }
 
-    // 自定义容量输入（新增）
+    // 自定义容量输入
     private fun showCustomInput(type: DrinkType) {
         val input = EditText(requireContext()).apply {
             inputType = InputType.TYPE_CLASS_NUMBER

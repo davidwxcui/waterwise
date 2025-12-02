@@ -5,6 +5,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.firestore.DocumentSnapshot
 import java.security.MessageDigest
 import java.util.UUID
 import java.util.UUID.randomUUID
@@ -24,9 +25,8 @@ interface AuthApi {
 
 data class AuthUser(val uid: String, val token: String)
 
-/**
- * Firebase auth implementation
- */
+// Firebase auth implementation
+
 object FirebaseAuthRepository : AuthApi {
 
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
@@ -64,10 +64,24 @@ object FirebaseAuthRepository : AuthApi {
             val uid = user.uid
             val token = user.fetchIdToken(false)
 
-            // Make sure Firestore has user file
             val local = ProfilePrefs.load(ctx).copy(email = email)
-            ProfilePrefs.save(ctx, local)
-            upsertUserProfile(uid, local)
+
+            val docRef = db.collection("users").document(uid)
+            val snap = try {
+                docRef.get().await()
+            } catch (e: Exception) {
+                null
+            }
+
+            if (snap != null && snap.exists()) {
+                val merged = mergeProfileFromSnapshot(snap, local)
+                ProfilePrefs.save(ctx, merged)
+
+                upsertUserProfile(uid, merged)
+            } else {
+                ProfilePrefs.save(ctx, local)
+                upsertUserProfile(uid, local)
+            }
 
             Result.success(AuthUser(uid, token))
         } catch (e: Exception) {
@@ -101,7 +115,39 @@ object FirebaseAuthRepository : AuthApi {
         auth.signOut()
     }
 
-    // Give user 10 bits numeric ID
+    private fun mergeProfileFromSnapshot(
+        snap: DocumentSnapshot,
+        fallback: Profile
+    ): Profile {
+        val sexStr = snap.getString("sex")
+        val actStr = snap.getString("activityLevel")
+
+        val sex = try {
+            if (sexStr != null) Sex.valueOf(sexStr) else fallback.sex
+        } catch (_: Exception) {
+            fallback.sex
+        }
+
+        val activity = try {
+            if (actStr != null) ActivityLevel.valueOf(actStr) else fallback.activity
+        } catch (_: Exception) {
+            fallback.activity
+        }
+
+        return fallback.copy(
+            name = snap.getString("name") ?: fallback.name,
+            email = snap.getString("email") ?: fallback.email,
+            age = (snap.getLong("age") ?: fallback.age.toLong()).toInt(),
+            heightCm = (snap.getLong("heightCm") ?: fallback.heightCm.toLong()).toInt(),
+            weightKg = (snap.getLong("weightKg") ?: fallback.weightKg.toLong()).toInt(),
+            activityFreqLabel = snap.getString("activityFreqLabel") ?: fallback.activityFreqLabel,
+            avatarUri = snap.getString("avatarUri") ?: fallback.avatarUri,
+            sex = sex,
+            activity = activity
+        )
+    }
+
+    // 给用户分配 10 位数字 public id（numericUid）
     private suspend fun ensureNumericUid(uid: String): String {
         return db.runTransaction { tx ->
             val userRef = db.collection("users").document(uid)
@@ -164,7 +210,7 @@ object FirebaseAuthRepository : AuthApi {
 
     // ---------- Firestore helpers ----------
     private suspend fun upsertUserProfile(uid: String, pf: Profile) {
-        val numericUid = ensureNumericUid(uid)
+        val numericUid = ensureNumericUid(uid)  // 保证 public id 存在
 
         val data = hashMapOf(
             "uid" to uid,

@@ -72,6 +72,7 @@ class HeightFragment : Fragment() {
                     minValue = 120
                     maxValue = 220
                     value = 170
+                    displayedValues = (120..220).map { it.toString() }.toTypedArray()
                     wrapSelectorWheel = false
                     descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
                 }
@@ -83,6 +84,7 @@ class HeightFragment : Fragment() {
                     minValue = 4
                     maxValue = 7
                     value = 5
+                    displayedValues = (4..7).map { it.toString() }.toTypedArray()
                     wrapSelectorWheel = false
                     descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
                 }
@@ -90,6 +92,7 @@ class HeightFragment : Fragment() {
                     minValue = 0
                     maxValue = 11
                     value = 7
+                    displayedValues = (0..11).map { it.toString() }.toTypedArray()
                     wrapSelectorWheel = false
                     descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
                 }

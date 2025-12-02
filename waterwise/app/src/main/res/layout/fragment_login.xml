@@ -7,7 +7,6 @@
     android:padding="24dp"
     android:gravity="center_horizontal">
 
-
     <FrameLayout
         android:layout_width="110dp"
         android:layout_height="110dp"
@@ -29,7 +28,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Email"
-        android:inputType="textEmailAddress"/>
+        android:inputType="textEmailAddress" />
 
     <EditText
         android:id="@+id/etPassword"
@@ -37,23 +36,33 @@
         android:layout_height="wrap_content"
         android:hint="Password"
         android:inputType="textPassword"
-        android:layout_marginTop="12dp"/>
+        android:layout_marginTop="12dp" />
+
+    <!-- If fail -->
+    <TextView
+        android:id="@+id/tvLoginError"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="@android:color/holo_red_dark"
+        android:textSize="12sp"
+        android:visibility="gone" />
 
     <Button
         android:id="@+id/btnLogin"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Login"
-        android:layout_marginTop="16dp"/>
+        android:layout_marginTop="16dp" />
 
     <Button
         android:id="@+id/btnCancel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Cancel"
-        android:layout_marginTop="8dp"/>
+        android:layout_marginTop="8dp" />
 
-    <!-- 去注册 -->
+    <!-- To Register -->
     <TextView
         android:id="@+id/tvGoRegister"
         android:layout_width="wrap_content"
@@ -61,5 +70,5 @@
         android:text="No account? Register"
         android:textSize="14sp"
         android:textColor="?attr/colorPrimary"
-        android:layout_marginTop="16dp"/>
+        android:layout_marginTop="16dp" />
 </LinearLayout>
