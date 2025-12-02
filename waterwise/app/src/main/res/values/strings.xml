@@ -56,6 +56,7 @@
 
     <!-- Content descriptions -->
     <string name="content_desc_go_back">Go back</string>
+    <string name="back">Back</string>
 
     <!-- Drink Reminder -->
     <string name="reminder_title">Drink Reminder</string>
